@@ -1,0 +1,391 @@
+---------------------------------------------------------
+--Скрипт создания динамических ltx, списка торговли.
+--Автор: Singapur22
+--Дата: 21\08\09
+---------------------------------------------------------
+--[[
+
++ оружие покупается только если у нпс в наличии оружие хуже.
++ аддоны покупаются только если есть в наличии оружие для данного аддона и если у него его нет
+- Продаваться оружие должно только если у нпс их несколько, при этом наилучшее продаваться не должно.
++ артефакты покупаются все. продаются только те, которые дают меньше эффекта чем другие в наличии. Или если их больше одного.
++ медикаменты продаются только если их больше установленного количества. При этом продаются наихудшие. Покупаются все.
++ части монстров продаются и покупаются без ограничений.
++ патроны должны покупаться только если у нпс есть для них оружие.
++ если предмет продаётся, то он не должен покупаться. А так же и наоборот.
+
+]]
+--------------------------------------------------------
+--таблицы торговли 
+--------------------------------------------------------
+
+--артефакты
+local af = 
+{
+    {---------------------------------------
+	    {'af_night_star',         sell = 25},
+	    {'af_cristall_flower',    sell = 75},
+		{'af_medusa',             sell = 75}
+	},--------------------------------------
+    {---------------------------------------
+	    {'af_gold_fish',          sell = 25},
+	    {'af_gravi',              sell = 75},
+		{'af_vyvert',             sell = 75}
+	},--------------------------------------
+	{---------------------------------------
+		{'af_soul',               sell = 25},
+		{'af_mincer_meat',        sell = 75},
+		{'af_blood',              sell = 75}
+	},--------------------------------------
+	{---------------------------------------
+	    {'af_electra_moonlight',  sell = 25},	    
+	    {'af_electra_flash',      sell = 75},
+		{'af_electra_sparkler',   sell = 75}
+	},--------------------------------------
+	{---------------------------------------
+	    {'af_rusty_sea-urchin',   sell = 25},	    
+	    {'af_rusty_kristall',     sell = 75},
+		{'af_rusty_thorn',        sell = 75}
+	},--------------------------------------
+	{---------------------------------------
+	    {'af_ameba_mica',         sell = 25},	    
+	    {'af_ameba_slug',         sell = 75},
+		{'af_ameba_slime',        sell = 75}
+	},--------------------------------------
+	{---------------------------------------
+	    {'af_cristall',           sell = 25},	    
+	    {'af_fireball',           sell = 75},
+		{'af_drops',              sell = 75}
+	},--------------------------------------
+	{---------------------------------------
+	    {'af_dummy_battery',      sell = 25},	    
+	    {'af_dummy_pellicle',     sell = 75},
+		{'af_dummy_glassbeads',   sell = 75}
+	},--------------------------------------
+	{---------------------------------------
+	    {'af_fuzz_kolobok',       sell = 25},	   
+	    {'af_dummy_spring',       sell = 75},
+	    {'af_dummy_dummy',        sell = 75}
+	}, --------------------------------------
+--оружие(пистолеты)
+    {----------------------------------------
+	    {'wpn_eagle_m1',          sell = 20},
+		{'wpn_desert_eagle',      sell = 20},
+		{'wpn_usp',               sell = 30},
+		{'wpn_colt_m1',           sell = 40},
+	    {'wpn_colt1911',          sell = 40},
+		{'wpn_sig220',            sell = 40},
+		{'wpn_walther_m1',        sell = 60},
+		{'wpn_walther',           sell = 60},
+		{'wpn_beretta',           sell = 60},
+		{'wpn_hpsa',              sell = 60},
+		{'wpn_fort_m1',           sell = 80},
+		{'wpn_fort',              sell = 80},
+		{'wpn_pb',               sell = 100},
+		{'wpn_pm',               sell = 100}
+	},--------------------------------------
+--оружие(автоматы)
+	{---------------------------------------
+	    {'wpn_gauss',             sell = 10},
+		{'wpn_fn2000',            sell = 10},
+		{'wpn_g36',               sell = 80},
+		{'wpn_rpg7',              sell = 10},
+		{'wpn_rg6_m1',            sell = 10},
+		{'wpn_rg-6',              sell = 10},
+		{'wpn_svd_m1',            sell = 20},
+		{'wpn_svd',               sell = 20},
+		{'wpn_svu',               sell = 20},
+		{'wpn_vintorez',          sell = 30},
+		{'wpn_val_m1',            sell = 70},
+		{'wpn_val',               sell = 30},
+		{'wpn_groza_m1',          sell = 40},
+		{'wpn_groza',             sell = 40},
+		{'wpn_sig_m2',            sell = 50},
+		{'wpn_sig_m1',            sell = 50},
+		{'wpn_sig550',            sell = 50},
+		{'wpn_lr300_m1',          sell = 50},
+		{'wpn_lr300',             sell = 70},
+		{'wpn_abakan_m2',         sell = 50},
+		{'wpn_abakan_m1',         sell = 50},
+		{'wpn_abakan',            sell = 90},
+		{'wpn_ak74_m1',           sell = 60},
+		{'wpn_ak74',              sell = 60},
+		{'wpn_ak74u_m1',          sell = 60},
+		{'wpn_ak74u',             sell = 60},
+		{'wpn_l85_m2',            sell = 60},
+		{'wpn_l85_m1',            sell = 60},
+		{'wpn_l85',               sell = 60},
+		{'wpn_mp5_m2',            sell = 60},
+		{'wpn_mp5_m1',            sell = 60},
+		{'wpn_mp5',               sell = 60},
+		{'wpn_spas12_m1',         sell = 80},
+		{'wpn_spas12',            sell = 80},
+		{'wpn_winchester_m1',     sell = 80},
+		{'wpn_wincheaster1300',   sell = 80},
+		{'wpn_toz34',            sell = 100},
+		{'wpn_bm16',             sell = 100}
+    },---------------------------------------------------
+--бронежилеты
+--пока отключены. После подключения, не забыть убрать их из таблицы не используемых предметов.
+ --[[   {----------------------------------------------------
+	    {'outfit_exo_m1',         sell = 75},
+		{'exo_outfit',            sell = 75},
+		{'scientific_outfit',     sell = 75},
+		{'protection_outfit',     sell = 75},
+		{'dolg_scientific_outfit',sell = 75},
+		{'outfit_stalker_m2',     sell = 75},
+		{'outfit_stalker_m1',     sell = 75},
+		{'stalker_outfit',        sell = 75},
+		{'military_outfit',       sell = 75},
+		{'outfit_specnaz_m1',     sell = 75},
+		{'outfit_dolg_m1',        sell = 75},
+		{'svoboda_heavy_outfit',  sell = 75},
+		{'dolg_outfit',           sell = 75},
+		{'specops_outfit',        sell = 75},
+		{'soldier_outfit',        sell = 75},
+		{'outfit_svoboda_m1',     sell = 75},
+		{'svoboda_light_outfit',  sell = 75},
+		{'monolit_outfit',        sell = 75},
+		{'ecolog_outfit',         sell = 75},
+		{'outfit_killer_m1',      sell = 75},
+		{'killer_outfit',         sell = 75},
+		{'outfit_bandit_m1',      sell = 75},
+		{'bandit_outfit',         sell = 75},
+		{'outfit_novice_m1',      sell = 75},
+		{'novice_outfit',         sell = 75}
+    }-------------------------------------------------]]
+}
+
+--медикоменты и еда, гранаты (покупка %, продажа %, пороговое количество для продажи)
+local med_eat =
+{
+bandage					= {buy = 100, sell = 10, kol_s = 3},
+medkit					= {buy = 100, sell = 10, kol_s = 1},
+medkit_scientic			= {buy = 100, sell = 10, kol_s = 1},
+medkit_army				= {buy = 100, sell = 10, kol_s = 1},
+antirad					= {buy = 100, sell = 10, kol_s = 2},
+bread					= {buy = 10, sell = 50, kol_s = 1},
+kolbasa					= {buy = 20, sell = 50, kol_s = 2},
+conserva				= {buy = 70, sell = 30, kol_s = 3},
+vodka					= {buy = 100,sell = 10, kol_s = 3},
+energy_drink			= {buy = 80, sell = 50, kol_s = 2},
+grenade_f1              = {buy = 50, sell = 50, kol_s = 3}, 
+grenade_rgd5            = {buy = 50, sell = 50, kol_s = 3}
+}
+
+--части монстров (покупка %, продажа %)
+local mutant =
+{
+mutant_flesh_eye		= {buy = 30, sell = 50},
+mutant_boar_leg			= {buy = 30, sell = 50},
+mutant_dog_tail			= {buy = 30, sell = 50},
+mutant_psevdodog_tail	= {buy = 30, sell = 50},
+mutant_krovosos_jaw		= {buy = 30, sell = 50},
+mutant_burer_hand		= {buy = 30, sell = 50},
+mutant_zombie_hand		= {buy = 30, sell = 50},
+mutant_snork_leg		= {buy = 30, sell = 50}
+}
+
+--снаряды (пороговое количество покупки\продажи, список оружия в котором используется)
+local ammo =
+{
+ammo_9x18_fmj			= {3, 'wpn_fort', 'wpn_pb', 'wpn_pm', 'wpn_fort_m1', 'wpn_mp5_m1'},
+ammo_9x18_pmm			= {3, 'wpn_fort', 'wpn_pb', 'wpn_pm', 'wpn_fort_m1', 'wpn_mp5_m1'},
+ammo_9x19_pbp			= {6, 'wpn_beretta', 'wpn_hpsa', 'wpn_mp5', 'wpn_walther', 'wpn_mp5_m2', 'wpn_walther_m1'},
+ammo_9x19_fmj			= {6, 'wpn_beretta', 'wpn_hpsa', 'wpn_mp5', 'wpn_walther', 'wpn_mp5_m2', 'wpn_walther_m1'},
+['ammo_11.43x23_hydro']	= {3, 'wpn_colt1911', 'wpn_desert_eagle', 'wpn_sig220', 'wpn_usp', 'wpn_colt_m1'},
+['ammo_11.43x23_fmj']	= {3, 'wpn_colt1911', 'wpn_desert_eagle', 'wpn_sig220', 'wpn_usp', 'wpn_colt_m1'},
+ammo_12x70_buck			= {3, 'wpn_bm16', 'wpn_spas12', 'wpn_toz34', 'wpn_wincheaster1300', 'wpn_spas12_m1', 'wpn_winchester_m1'},
+ammo_12x76_dart			= {3, 'wpn_bm16', 'wpn_spas12', 'wpn_toz34', 'wpn_wincheaster1300', 'wpn_spas12_m1', 'wpn_winchester_m1'},
+ammo_12x76_zhekan		= {3, 'wpn_bm16', 'wpn_spas12', 'wpn_toz34', 'wpn_wincheaster1300', 'wpn_spas12_m1', 'wpn_winchester_m1'},
+['ammo_5.45x39_ap']		= {4, 'wpn_abakan', 'wpn_ak74', 'wpn_ak74u', 'wpn_ak74_m1', 'wpn_abakan_m1', 'wpn_ak74u_m1', 'wpn_groza_m1', 'wpn_abakan_m2'},
+['ammo_5.45x39_fmj']	= {4, 'wpn_abakan', 'wpn_ak74', 'wpn_ak74u', 'wpn_ak74_m1', 'wpn_abakan_m1', 'wpn_ak74u_m1', 'wpn_groza_m1', 'wpn_abakan_m2'},
+ammo_9x39_sp5			= {3, 'wpn_groza', 'wpn_val', 'wpn_vintorez', 'wpn_eagle_m1', 'wpn_val_m1'},
+ammo_9x39_ap			= {3, 'wpn_groza', 'wpn_val', 'wpn_vintorez', 'wpn_eagle_m1', 'wpn_val_m1'},
+['ammo_9x39_pab9']		= {3, 'wpn_groza', 'wpn_val', 'wpn_vintorez', 'wpn_eagle_m1', 'wpn_val_m1'},
+['ammo_5.56x45_ss190']	= {4, 'wpn_fn2000', 'wpn_g36', 'wpn_l85', 'wpn_lr300', 'wpn_sig550', 'wpn_l85_m1', 'wpn_lr300_m1', 'wpn_sig_m1', 'wpn_sig_m2', 'wpn_l85_m2'},
+['ammo_5.56x45_ap']		= {4, 'wpn_fn2000', 'wpn_g36', 'wpn_l85', 'wpn_lr300', 'wpn_sig550', 'wpn_l85_m1', 'wpn_lr300_m1', 'wpn_sig_m1', 'wpn_sig_m2', 'wpn_l85_m2'},
+['ammo_7.62x54_7h14']	= {2, 'wpn_svd', 'wpn_svu', 'wpn_svd_m1'},
+['ammo_7.62x54_7h1']	= {2, 'wpn_svd', 'wpn_svu', 'wpn_svd_m1'},
+['ammo_7.62x54_ap']		= {2, 'wpn_svd', 'wpn_svu', 'wpn_svd_m1'},
+['ammo_og-7b']			= {3, 'wpn_rpg7'},
+['ammo_vog-25p']		= {5, 'wpn_addon_grenade_launcher', 'wpn_groza', 'wpn_rg-6', 'wpn_groza_m1', 'wpn_abakan_m2'},
+['ammo_vog-25']			= {5, 'wpn_addon_grenade_launcher', 'wpn_groza', 'wpn_rg-6', 'wpn_groza_m1', 'wpn_abakan_m2'},
+ammo_m209				= {5, 'wpn_fn2000', 'wpn_addon_grenade_launcher_m203', 'wpn_rg6_m1'},
+ammo_gauss              = {2, 'wpn_gauss'},
+--аддоны
+wpn_addon_scope					= {1, 'wpn_ak74', 'wpn_abakan', 'wpn_ak74_m1', 'wpn_abakan_m2'}, --прицел ПСО
+wpn_addon_scope_susat			= {1, 'wpn_lr300'},                                              --прицел ИН
+wpn_addon_silencer				= {1, 'wpn_mp5', 'wpn_lr300', 'wpn_desert_eagle', 'wpn_usp', 'wpn_sig220', 'wpn_beretta', 'wpn_fort', 'wpn_fort_m1', 'wpn_mp5_m1', 'wpn_eagle_m1'},    --глушитель
+wpn_addon_grenade_launcher		= {1, 'wpn_ak74', 'wpn_ak74_m1'},                                            --гранатомёт ОТ
+wpn_addon_grenade_launcher_m203 = {1, 'wpn_lr300', 'wpn_sig550', 'wpn_lr300_m1', 'wpn_sig_m1', 'wpn_sig_m2'} --гранатомёт Ин
+}
+
+--Предметы не используемые в торговле.
+local no_trade = {'device_torch', 'detector_simple', 'detector_advances', 'detector_elite', 'device_pda', 'hand_radio', 'guitar_a', 'harmonica_a',
+'gunslinger_flash', 'af_blood_tutorial', 'esc_wounded_flash', 'quest_case_02', 'dar_document1', 'dar_document2', 'dar_document3', 'dar_document4',
+'dar_document5', 'kruglov_flash', 'lab_x16_documents', 'good_psy_helmet', 'bad_psy_helmet', 'decoder', 'dynamite', 'quest_case_01', 'hunters_toz',
+'bar_ecolog_flash', 'bar_tiran_pda', 'bar_lucky_pda', 'wpn_pm_arena', 'wpn_mp5_arena', 'wpn_toz34_arena', 'wpn_spas12_arena', 'wpn_ak74_arena',
+'wpn_bm16_arena', 'wpn_ak74u_arena', 'wpn_val_arena', 'wpn_groza_arena', 'wpn_fn2000_arena', 'wpn_g36_arena',
+--броники пока в не используемых. Удплить, после подключения к используемым.
+'outfit_exo_m1', 'exo_outfit', 'scientific_outfit', 'protection_outfit', 'dolg_scientific_outfit', 'outfit_stalker_m2', 'outfit_stalker_m1', 'stalker_outfit', 'military_outfit', 
+'outfit_specnaz_m1', 'outfit_dolg_m1', 'svoboda_heavy_outfit', 'dolg_outfit', 'specops_outfit', 'soldier_outfit', 'outfit_svoboda_m1', 'svoboda_light_outfit', 'monolit_outfit',
+'ecolog_outfit', 'outfit_killer_m1', 'killer_outfit', 'outfit_bandit_m1', 'bandit_outfit', 'outfit_novice_m1', 'novice_outfit'}
+
+local vhr = {}
+
+--функция создания динамических ltx, списка торговли.
+function create_dinamic_ltx(npc)
+    vhr = {}	
+	npc:iterate_inventory(keep_item, npc)
+	
+    local ltx = '[trader]\n'..
+	            'buy_condition = buy\n'..
+                'sell_condition = sell\n'
+	local buy = '[buy]\n'
+	local sell = '[sell]\n'
+
+--артефакты, оружие, бронежилеты(отключено)
+	for _,tip in ipairs(af) do
+	    local flag = nil
+	    for _,v in ipairs(tip) do
+		    if flag == nil then
+		        for item,kol in pairs(vhr) do
+                    if item == v[1] then
+				        flag = kol
+					    break
+				    end
+		        end
+			    if flag ~= nil then
+				    buy = buy..v[1]..'\n'
+				else
+				    buy = buy..v[1]..' = '..tostring(math.random(10, 100)/100)..', '..tostring(math.random(10, 50)/100)..'\n'
+				end
+				sell = sell..v[1]..'\n'
+			else
+			    buy = buy..v[1]..'\n'
+				if v.sell >= math.random(100) then
+				    sell = sell..v[1]..' = 1, '..tostring(math.random(100, 400)/100)..'\n'
+				else
+				    sell = sell..v[1]..'\n'
+				end
+			end
+		end
+	end
+
+--медикаменты, еда, гранаты
+    for k,v in pairs(med_eat) do
+		local flag = 0
+	    for item,kol in pairs(vhr) do
+            if item == k then
+				flag = kol
+				break
+			end
+		end
+		if flag > v.kol_s then
+			buy = buy..k..'\n'
+		    if v.sell >= math.random(100) then
+				sell = sell..k..' = 1, '..tostring(math.random(100, 400)/100)..'\n'
+			else
+				sell = sell..k..'\n'
+			end
+		else
+			sell = sell..k..'\n'
+			if v.buy >= math.random(100) then
+				buy = buy..k..' = '..tostring(math.random(10, 100)/100)..', '..tostring(math.random(10, 50)/100)..'\n'
+			else
+				buy = buy..k..'\n'
+			end
+		end
+	end
+
+--части монстров
+    for k,v in pairs(mutant) do
+	    local flag = false
+		for item,kol in pairs(vhr) do
+            if item == k then
+			    flag = true
+				break
+			end
+		end
+		if flag ~= true then
+		    if v.buy >= math.random(100) then
+				buy = buy..k..' = '..tostring(math.random(10, 100)/100)..', '..tostring(math.random(10, 50)/100)..'\n'
+			else
+				buy = buy..k..'\n'
+			end
+			sell = sell..k..'\n'
+		else
+		    buy = buy..k..'\n'
+		    if v.sell >= math.random(100) then
+				sell = sell..k..' = 1, '..tostring(math.random(100, 400)/100)..'\n'
+			else
+				sell = sell..k..'\n'
+			end
+		end
+	end
+
+--снаряды(патроны)
+    for k,v in pairs(ammo) do
+	    local flag_k = 0
+		local flag_n = false
+		for item,kol in pairs(vhr) do
+            if item == k then
+			    flag_k = kol
+			end
+			for _,nal in pairs(v) do
+			    if item == nal then
+				    flag_n = true
+				end
+			end
+		end
+	    
+		if flag_n then		
+		    if flag_k > v[1] then
+			    buy = buy..k..'\n'
+				if math.random(100) <= 65 then
+				    sell = sell..k..' = 1, '..tostring(math.random(100, 400)/100)..'\n'
+				else
+				    sell = sell..k..'\n'
+				end
+			else
+			    if 65 >= math.random(100) then
+				    buy = buy..k..' = '..tostring(math.random(10, 100)/100)..', '..tostring(math.random(10, 50)/100)..'\n'
+			    else
+				    buy = buy..k..'\n'
+			    end
+			    sell = sell..k..'\n'
+			end
+		else
+		    buy = buy..k..'\n'
+			sell = sell..k..' = 1, '..tostring(math.random(100, 400)/100)..'\n'
+		end
+    end
+	
+--не торгуемые предметы
+    for _,v in pairs(no_trade) do
+	    buy = buy..v..'\n'
+		sell = sell..v..'\n'
+	end
+	vhr = nil
+	return ltx..buy..sell
+end
+
+--определение списка предметов в инвентаре npc
+function keep_item(npc, item)
+    local est = false
+	for k,v in pairs(vhr) do
+		if k == item:section() then
+			v = v + 1
+			vhr[item:section()] = v
+            est = true
+		end
+	end
+	if est == false then
+	    vhr[item:section()] = 1
+	else
+	    est = false
+	end
+end
+
+

@@ -1,0 +1,303 @@
+-----------------------------------------------------------------------------------
+-- Monster binding
+-----------------------------------------------------------------------------------
+local particles={}
+
+-- DMX MOD on
+local num
+local effects={{1,2}}
+local snd = xr_sound.get_safe_sound_object("monsters\\pseudodog\\psy_affect_0",	sound_object.s2d)
+local timer = 0
+local time_next_attack = 2500
+local time_burer_next_attack = 6000
+local time_cam_effect = 700
+-- DMX MOD off
+function bind(obj)
+	printf("_bp: monster.bind: name='%s', id='%d'", obj:name(), obj:id())
+
+	-- Для спауна
+	--xr_spawner.spawn_client(obj)
+
+	local new_binder = generic_object_binder(obj)
+	obj:bind_object(new_binder)
+end
+
+------------------------------------------------------------------------------------
+class "generic_object_binder" (object_binder)
+
+function generic_object_binder:__init(obj) super(obj)
+	self.loaded = false
+end 
+
+function generic_object_binder:reload(section)
+	object_binder.reload(self, section)
+end
+
+function generic_object_binder:reinit()
+	object_binder.reinit(self)
+
+	-- У торговца нет поддержки перемещения
+	if self.object:clsid() ~= clsid.script_trader then
+		self.object:set_patrol_extrapolate_callback(generic_object_binder.extrapolate_callback, self)
+	end
+
+	db.storage[self.object:id()] = { }
+
+	self.st = db.storage[self.object:id()]
+
+	self.object:set_callback(callback.patrol_path_in_point, self.waypoint_callback, self)
+	self.object:set_callback(callback.hit,					self.hit_callback,		self)
+	self.object:set_callback(callback.death,				self.death_callback,	self)
+end
+
+function generic_object_binder:update(delta)
+	object_binder.update(self, delta)
+
+--	printf("_bp: generic_object_binder: UPDATE [name='%s' time=%d]",
+--		self.object:name(), time_global())
+
+	-- Апдейт торговли
+	if self.object:clsid() == clsid.script_trader then
+		trade_manager.update(self.object)
+	end
+
+	if self.object:alive() then
+		if self.object:is_talk_enabled() then
+			self.object:set_tip_text("character_use")
+		else
+			self.object:set_tip_text("")
+		end
+	 
+--Bloodsucker ON---------------------------------------------------------
+ if self.object:clsid()==clsid.bloodsucker_s then -- and self.object.health > 0.25 then
+        local oTarget = self.object:get_enemy()
+        if oTarget and IsStalker(oTarget) and self.object:see(oTarget) then
+            local iDist = self.object:position():distance_to(oTarget:position())
+            if iDist <= 3 then
+                local iTime = time_global()
+                if (self.timer_anim or 0) < iTime then
+                    self.timer_anim = iTime + 4000 --2000
+     if self.object:position():distance_to(db.actor:position()) < 5 then
+                        sound_object("monsters\\bloodsucker\\vampire_sucking"):play_no_feedback(oTarget,sound_object.s2d,0,vector(),5.0)
+     end
+                    if oTarget:id()==0 then
+                        local pos = self.object:position()
+                        local vDir = pos:sub(oTarget:position())
+                        db.actor:set_actor_direction(-vDir:getH())
+                        vDir:normalize()
+                        local pos = self.object:position():sub(vDir)
+                        db.actor:set_actor_position(pos)
+                        set_inactivate_input_time(15)    -- отключаем управление
+			level.add_pp_effector("nosferatu.ppe", 999, false)
+			level.add_cam_effector("camera_effects\\drunk.anm", 111, false)
+--      local aitem = db.actor:active_item()
+--                     if aitem and math.random()<0.3 and (db.actor:active_slot()==1 or db.actor:active_slot()==2) then 
+--          db.actor:drop_item(aitem) 
+--      end
+                    end
+                end
+                if (self.timer_anim and self.timer_anim >= iTime) then
+                    if oTarget:id()==0 then db.actor.health = -0.001 end
+                end
+            end
+        end
+    end
+--Bloodsucker Off--------------------------------------------------------
+
+	else
+		self.object:set_tip_text_default()
+	end
+
+--Psy-Dog SoC ON---------------------------------------------------------
+    -- Атака Пси-пса by build 1935
+    -- Автор функции: Charsi
+    -- Идея: GSC
+    -- Дата: 25.02.11
+
+  if self.object:clsid()==clsid.pseudodog_s and timer < time_global() then
+--if self.object:clsid()==clsid.pseudodog_s and self.object:section()~="dogfrend" and timer < time_global() then -- если Дружок станет атаковать
+local a = db.actor
+local oTarget = self.object:get_enemy()
+local v1 = self.object:direction()
+local v2 = a:direction()
+
+if oTarget and (oTarget:id()==0) and (v1.x*v2.x) + (v1.z*v2.z ) < -0.6 and self.object:see(a) and self.object:position():distance_to(a:position())<20 then
+	num=1
+	for _,n in pairs(effects[num]) do
+		level.add_cam_effector("build_1935_pseudodog_effect_"..n..".anm", 990+n, false, "")
+	end
+	level.add_pp_effector ("psy_antenna_indoor.ppe", 395, false)
+	local h = hit()
+	h.draftsman = self.object
+	h.type = hit.telepatic
+	h.direction = vector():set(0,0,0)
+	h.power = 0.2
+	h.impulse = 0.0
+	a:hit(h)
+	 snd:play_at_pos(db.actor, vector():set(0,0,0), 0, sound_object.s2d)
+--	local aitem=a:active_item()
+--	if aitem and math.random()<0.2 and (a:active_slot()==1 or a:active_slot()==2) then
+--		a:drop_item(aitem)
+--	end
+	timer=time_global() + time_next_attack*(1+math.random(-0.2,0.2))+time_cam_effect
+end
+elseif num and timer < time_global() + time_next_attack then
+	level.remove_pp_effector(395)
+	for _,n in pairs(effects[num]) do
+		level.remove_cam_effector(990+n)
+	end
+	num=nil
+end
+--Psy-Dog SoC Off--------------------------------------------------------
+-- Burer COP on ---------------------------------------------------------
+-- Атака бюрера из ЗП
+-- Автор: Shadows
+-- Использованы материалы от Charsi
+if self.object:clsid()==clsid.burer_s and timer < time_global() then
+local a = db.actor
+local oTarget = self.object:get_enemy()
+local v1 = self.object:direction()
+local v2 = a:direction()
+
+if oTarget and (oTarget:id()==0) and (v1.x*v2.x) + (v1.z*v2.z ) < -0.6 and self.object:see(a) and self.object:position():distance_to(a:position())<25 then
+	num=1
+	-- Proper72 burer уменьшена вероятность отъема выносливости и выпадения оружия
+	if math.random()<0.4 then
+		db.actor.power = -1.0
+	end	
+	local aitem=a:active_item()
+	if aitem and math.random()<0.2 and (a:active_slot()==1 or a:active_slot()==2) then
+	-- Proper72 end
+		a:drop_item(aitem)
+	end
+	timer=time_global() + time_burer_next_attack*(1+math.random(-0.2,0.2))
+end
+elseif num and timer < time_global() + time_burer_next_attack then
+	num=nil
+end
+-- Burer COP off --------------------------------------------------------
+
+
+	if self.st.active_section ~= nil then
+		xr_logic.issue_event(self.object, self.st[self.st.active_scheme], "update", delta)
+	end
+end
+
+function generic_object_binder:extrapolate_callback()
+	local cur_pt = self.object:get_current_point_index()
+
+    if self.object:get_script ()	== false then 
+       return false
+    end    
+    
+	if patrol(self.object:patrol()):flags(cur_pt):get() == 0 then
+		--printf("_bp: generic_object_binder: extrapolate_callback: cur_pt = %d: true", cur_pt)
+		return true
+	end
+	--printf("_bp: generic_object_binder: extrapolate_callback: cur_pt = %d: false", cur_pt)
+	return false
+end
+
+function generic_object_binder:waypoint_callback(obj, action_type, index)
+	if self.st.active_section ~= nil then
+		xr_logic.issue_event(self.object, self.st[self.st.active_scheme], "waypoint_callback", obj, action_type, index)
+	end
+end
+
+function generic_object_binder:death_callback(victim, who)
+	if who:id() == db.actor:id() then
+		xr_statistic.addKillCount(self.object)
+	end
+
+	if self.st.mob_death then
+		xr_logic.issue_event(self.object, self.st.mob_death, "death_callback", victim, who)
+	end
+
+	if self.st.active_section then
+		xr_logic.issue_event(self.object, self.st[self.st.active_scheme], "death_callback", victim, who)
+	end
+
+	smart_terrain.on_death( self.object:id() )
+
+	--' Наносим небольшой импульс вперед.
+	local h = hit()
+	h.draftsman = self.object
+	h.type = hit.fire_wound
+	h.direction = db.actor:position():sub(self.object:position())
+	h:bone("pelvis")
+	h.power = 1
+	h.impulse = 10
+	self.object:hit(h)
+
+end
+
+function generic_object_binder:hit_callback(obj, amount, local_direction, who, bone_index)
+--	printf("HIT_CALLBACK: [%s] amount[%s]", obj:name(), amount)
+	if self.st.hit then
+		xr_logic.issue_event(self.object, self.st.hit, "hit_callback", obj, amount, local_direction, who, bone_index)
+	end
+end
+
+function generic_object_binder:net_spawn(sobject)
+	if not object_binder.net_spawn(self, sobject) then
+		return false
+	end
+
+	db.add_obj(self.object)
+
+	xr_gulag.setup_gulag_and_logic_on_spawn( self.object, self.st, sobject, modules.stype_mobile, self.loaded )
+
+	return true
+end
+
+function generic_object_binder:net_destroy()
+	self.object:set_callback(callback.death,				nil)
+	self.object:set_callback(callback.patrol_path_in_point, nil)
+	self.object:set_callback(callback.hit,					nil)
+
+	local st = db.storage[self.object:id()]
+	if st and st.active_scheme then
+		xr_logic.issue_event(self.object, st[st.active_scheme], "net_destroy")
+	end
+	
+	db.del_obj(self.object)
+	db.storage[self.object:id()] = nil
+
+	object_binder.net_destroy(self)
+end 
+
+function generic_object_binder:reload(section)
+	object_binder.reload(self, section)
+	--printf("generic_object_binder:reload(): self.object:name()='%s'", self.object:name())
+end
+
+function generic_object_binder:net_save_relevant()
+	--printf("generic_object_binder:net_save_relevant(): self.object:name()='%s'", self.object:name())
+	return true
+end
+
+function generic_object_binder:save(packet)
+	printf("generic_object_binder:save(): self.object:name()='%s'", self.object:name())
+	object_binder.save(self, packet)
+
+	xr_logic.save_obj(self.object, packet)
+	if self.object:clsid() == clsid.script_trader then
+		trade_manager.save(self.object, packet)
+	end
+end
+
+function generic_object_binder:load(reader)
+	self.loaded = true
+
+	printf("generic_object_binder:load(): self.object:name()='%s'", self.object:name())
+	object_binder.load(self, reader)
+
+	if reader:r_eof() then
+		abort("SAVE FILE IS CORRUPT")
+	end
+
+	xr_logic.load_obj(self.object, reader)
+	if self.object:clsid() == clsid.script_trader then
+		trade_manager.load(self.object, reader)
+	end
+end

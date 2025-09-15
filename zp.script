@@ -1,0 +1,329 @@
+function inform_bablo (actor, npc)
+    dialogs.relocate_money(npc, 500, "out")    
+end
+
+function inform_bablo_proveril (actor, npc)
+	return actor:money() >= 500
+end
+
+function poluchi_m60 (first_speaker, second_speaker)
+    dialogs.relocate_item_section(first_speaker, "wpn_m60", "in")
+    dialogs.relocate_item_section(first_speaker, "ammo_7.62x51_fmj", "in")
+    dialogs.relocate_item_section(first_speaker, "ammo_7.62x51_ap", "in")
+end
+
+function game_credits_2 (actor, npc)
+	db.gameover_credits_started = true
+	game.start_tutorial("credits_seq_zp_final_two")
+end
+
+function zp_final_two ()  
+	game.start_tutorial("mov_refuse_osoznanie")	
+end
+
+function zp_final_one ()  
+	game.start_tutorial("mov_join_osoznanie")	
+end
+
+function game_credits (actor, npc)
+	db.gameover_credits_started = true
+	game.start_tutorial("credits_seq_zp_final_one")
+end
+
+function gg_petuh ( soldier, actor )
+    relation_registry.set_community_goodwill ("soldier", "actor", -15000)
+end
+
+function gg_petuh2 ( military, actor )
+    relation_registry.set_community_goodwill ("military", "actor", -15000)
+end
+
+function alfa_vse_save (task_id, subtask)
+    if has_alife_info("val_alfa_1") and 
+       has_alife_info("val_alfa_9") then
+       db.actor:give_info_portion ("alfa_vse_save")
+    end
+    return false  
+end
+
+function alfa_vse_die (task_id, subtask)
+    if has_alife_info("val_alfa_11") and 
+       has_alife_info("val_alfa_19") then
+       db.actor:give_info_portion ("alfa_vse_die")
+    end
+    return false  
+end
+
+function otdai_exo (npc, actor)
+    dialogs.relocate_item_section(actor, "military_exo_outfit", "out")
+    dialogs.relocate_item_section(actor, "wpn_rg10_ognemet", "out")
+end
+
+function poluchi_exo (npc, actor)
+    dialogs.relocate_item_section(npc, "military_exo_outfit", "in")
+    dialogs.relocate_item_section(npc, "wpn_rg10_ognemet", "in")
+end
+
+function have_vodka (task, objective)
+    if db.actor ~= nil then
+    return db.actor:object("vodka") ~= nil
+end
+    return false
+end
+
+function otdai_vodku (first_speaker, second_speaker)
+    dialogs.relocate_item_section(second_speaker, "vodka", "out")
+end
+
+function otday_keis (first_speaker, second_speaker)
+    dialogs.relocate_item_section(second_speaker, "quest_case_sh", "out")
+end
+
+function dobrii_barmen (first_speaker, second_speaker)
+    dialogs.relocate_item_section(first_speaker, "medkit_scientic", "in")
+    dialogs.relocate_item_section(first_speaker, "medkit_scientic", "in")
+    dialogs.relocate_item_section(first_speaker, "medkit_scientic", "in")
+end
+
+function poluchi_dengi (npc, actor)
+    dialogs.relocate_money(npc, 10000, "in")
+end
+
+function poluchi_keis (npc, actor)
+    dialogs.relocate_item_section(npc, "quest_case_sh", "in")
+end
+
+function otday_flash (first_speaker, second_speaker)
+    dialogs.relocate_item_section(second_speaker, "zp_flash", "out")
+end
+
+function have_a_flash (stalker, player)
+    return stalker:object ("zp_flash") ~= nil
+end
+
+function poluchi_flash (npc, actor)
+    dialogs.relocate_item_section(npc, "zp_flash", "in")
+end
+
+function zloi_dolg ( dolg, actor )
+    relation_registry.set_community_goodwill ("dolg", "actor", -1500)
+end
+
+function has_keis (task, objective)
+    if db.actor ~= nil then
+    return db.actor:object("quest_case_sh") ~= nil
+end
+    return false
+end
+
+function novii_bronik (first_speaker, second_speaker)
+    dialogs.relocate_item_section(first_speaker, "military_outfit", "in")
+end
+
+function poluchi_pulemet (first_speaker, second_speaker)
+    dialogs.relocate_item_section(first_speaker, "wpn_minigun", "in")
+    dialogs.relocate_item_section(first_speaker, "ammo_7.62x54_lenta", "in")
+    dialogs.relocate_item_section(first_speaker, "ammo_7.62x54_lenta", "in")
+    dialogs.relocate_item_section(first_speaker, "ammo_7.62x51_fmj", "in")
+end
+
+function have_exo (task, objective)
+    if db.actor ~= nil then
+    return db.actor:object("military_exo_outfit") ~= nil
+end
+    return false
+end
+
+function spawn_ros_soldier ()
+   alife():create("ros_soldier",vector():set(-51.29,-0.002,126.23),57408,1419)
+   alife():create("ros_soldier",vector():set(-270.71,-3.54,161.37),4035,1344)
+   alife():create("ros_soldier",vector():set(-277.97,-0.0004,139.53),2232,1349)
+   alife():create("ros_soldier",vector():set(-242.24,-9.59,190.24),13046,1337)
+   alife():create("ros_soldier",vector():set(-199.095,0.006,78.302),27013,1372)
+   alife():create("ros_soldier",vector():set(-225.066,-0.0019,4.1),19960,1397)
+end
+
+function spawn_zp_zombie ()
+   alife():create("zp_zombie_1",vector():set(95.05,0.22,-306.79),89060,1476)
+   alife():create("zp_zombie_2",vector():set(87.14,-9.67,-233.36),84636,1473)
+   alife():create("zp_zombie_3",vector():set(58.06,-10.51,-232.529),69505,1473)
+   alife():create("zp_zombie_4",vector():set(127.1,0.6477,-205.13),109323,1439)
+   alife():create("zp_zombie_5",vector():set(167.55556,-7.84965,-99.2235),131863,1442)
+   alife():create("zp_zombie_6",vector():set(164.857,-7.8,-122.856),131154,1465)
+   alife():create("zp_zombie_7",vector():set(152.728,-5.832,-59.679),125696,1463)
+   alife():create("zp_zombie_8",vector():set(142.262,-2.251,71.884),119452,1521)
+   alife():create("zp_zombie_9",vector():set(104.514,0.37,48.85),94652,1520)
+   alife():create("zp_zombie_10",vector():set(102.93,-9.7,-252.12),93456,1450)
+end
+
+function all_10 ()
+   alife():create("tushkano_normal",vector():set(80.354,-2.407,-265.241),249352,263)
+   alife():create("tushkano_normal",vector():set(134.466,-3.067,261.082),294031,367)
+   alife():create("snork_strong",vector():set(142.172,-4.996,119.784),299645,372)
+   alife():create("snork_weak",vector():set(140.601,-0.206,-152.397),298341,398)
+   alife():create("zombie_normal",vector():set(-98.687,-0.297,-267.251),113106,272)
+   alife():create("zombie_normal",vector():set(-78.517,-0.404,-167.736),128936,285)
+   alife():create("dog_normal",vector():set(7.686,-0.717,-164.238),181369,288)
+   alife():create("snork_weak",vector():set(-166.54,1.124,17.79),70709,675)
+   alife():create("tushkano_normal",vector():set(-174.41,1.124,57.39),62704,674)
+   alife():create("zombie_normal",vector():set(-187.30,1.12,95.95),49362,673)
+   alife():create("zombie_normal",vector():set(-200.76,-0.135,-276648),36050,596)
+   alife():create("zombie_normal",vector():set(-91.99,-0.103,-49.2543),148720,599)
+   alife():create("ros_soldier",vector():set(144.665,10.3,-266.052),341884,959)
+   alife():create("ros_soldier",vector():set(129.7,0.15,-293.68),326603,970)
+   alife():create("snork_weak",vector():set(-7.313,-4.139,-308.62),165467,850)
+   alife():create("snork_weak",vector():set(45.966,-4.77,-372.678),232395,944)
+   alife():create("zombie_normal",vector():set(-118.12,0.78,-504.06),39387,834)
+   alife():create("zombie_normal",vector():set(-158.766,1.397,-502.38),7223,835)
+   alife():create("zombie_normal",vector():set(-85.694,0.847,-522.4387),74521,837)
+   alife():create("osoznanie_4",vector():set(117.98,3.05,-489.88562),314111,948)
+   alife():create("osoznanie_6",vector():set(-96.2869,1.273,-373.89),62402,844)
+   alife():create("osoznanie_8",vector():set(94.6,-3.5,61.43),289542,907)
+   alife():create("osoznanie_1",vector():set(-23.5,0.07,70.6),146867,900)
+   alife():create("ros_soldier",vector():set(3.11,-0.29573,14.816),177447,1012)
+   alife():create("ros_soldier",vector():set(-46.547,0.001,-190.1),120370,878)
+   alife():create("osoznanie_6",vector():set(-72.22,3.78,-157.38),89950,879)
+   alife():create("ros_soldier",vector():set(47.9,6.17,100.69),234928,904)
+   alife():create("zombie_normal",vector():set(99.629,0.0444,-50.0165634),294848,992)
+end
+
+function gar_mochilovo ()
+   alife():create("osoznanie_6",vector():set(-161.3967,0.398,-34.097),58071,302)
+   alife():create("osoznanie_4",vector():set(-158.95,0.287,74.806),60592,337)
+   alife():create("bandos",vector():set(-131.026,0.42,-18.02),85551,320)
+   alife():create("bandos",vector():set(-229.445,0.438,-20.35),14986,307)
+   alife():create("bandos",vector():set(-185.53,0.487,33.35),39335,315)
+   alife():create("osoznanie_4",vector():set(-129.445,0.4084,24.152),86900,327)
+end
+
+function agr_osoznanie ()
+   alife():create("osoznanie_1",vector():set(87.28,-0.0067,37.647),322477,423)
+   alife():create("osoznanie_2",vector():set(78.56,-0.0008,28.598),313855,423)
+   alife():create("osoznanie_3",vector():set(71.26,-0.198,49.31),307216,492)
+   alife():create("osoznanie_4",vector():set(70.04,0.5579,20.07),305852,671)
+   alife():create("osoznanie_5",vector():set(47.0,-0.08,-2.237),284187,462)
+   alife():create("osoznanie_6",vector():set(28.32,-0.1,50.06),267270,491)
+   alife():create("osoznanie_7",vector():set(5.21,-0.15,49.77),245301,475)
+   alife():create("osoznanie_8",vector():set(13.04,-0.20,45.0),253477,475)
+   alife():create("osoznanie_1",vector():set(-5.02,-0.2,44.96),235291,475)
+   alife():create("osoznanie_2",vector():set(-5.39,0.1,57.88),234588,471)
+   alife():create("osoznanie_1",vector():set(-22.244,-0.0002,38.428),218099,473)
+   alife():create("osoznanie_2",vector():set(-7,98,0.968,39.5),232482,490)
+   alife():create("osoznanie_3",vector():set(-5.735,1.24,42.9),234573,490)
+   alife():create("osoznanie_4",vector():set(4.134,1.240,42.88),244609,490)
+   alife():create("osoznanie_5",vector():set(-17.37,-0.20,27.82),222826,470)
+   alife():create("osoznanie_6",vector():set(-24.225,-0.2,20.99),216022,473)
+   alife():create("osoznanie_7",vector():set(-45.99,-0.213,20.877),194683,469)
+   alife():create("osoznanie_8",vector():set(-50.73,-0.009,0.616),190936,474)
+   alife():create("osoznanie_1",vector():set(-50.42,0.37,-4.28),190930,474)
+   alife():create("osoznanie_2",vector():set(-46.745,-0.20,-18.534),194146,468)
+   alife():create("osoznanie_1",vector():set(-31.80,9.43,3.26),209184,681)
+   alife():create("osoznanie_2",vector():set(-27.25,5.0,-0.64),213243,486)
+   alife():create("osoznanie_3",vector():set(-23.139,5.1855,7.91),217358,485)
+   alife():create("osoznanie_4",vector():set(-1.17,7.4966,4.98),238913,487)
+   alife():create("osoznanie_5",vector():set(-1.8996,2.4999,5.0026),238175,481)
+   alife():create("osoznanie_6",vector():set(6.98,-0.0028,13.85),247314,478)
+   alife():create("osoznanie_7",vector():set(14.31,-0.0026,9.96),254113,479)
+   alife():create("osoznanie_8",vector():set(19.98,-0.0001,16.69),259996,479)
+   alife():create("osoznanie_1",vector():set(29.62,-0.1,-1.69),268537,464)
+   alife():create("osoznanie_2",vector():set(28.39,4.82,-30.85),267839,459)
+   alife():create("osoznanie_1",vector():set(26.84,-0.2,-25.3),265868,459)
+   alife():create("osoznanie_2",vector():set(12.99,-0.003,-28.076),253408,459)
+   alife():create("osoznanie_3",vector():set(-6.695,-0.23,-25.086),233079,467)
+   alife():create("osoznanie_4",vector():set(62.24,-0.2,-1.135),298656,462)
+   alife():create("osoznanie_5",vector():set(60.667,-0.2,4.718),297341,462)
+   alife():create("osoznanie_6",vector():set(62.075,-0.2,15.188),298677,461)
+   alife():create("osoznanie_7",vector():set(66.402,-0.001,-35.44),302587,460)
+   alife():create("osoznanie_8",vector():set(23.54,-0.002,14.31),263314,464)
+   alife():create("osoznanie_1",vector():set(18.95,4.824,24.78),258678,480)
+end
+
+function spawn_nii_ataka ()
+   alife():create("agr_spec",vector():set(-75.41,0.14,-181.77),58888,667)
+   alife():create("agr_spec",vector():set(-141.08,1.32,-212.18),58888,667)
+   alife():create("osoznanie_1",vector():set(-191.4127,-0.081,-125.5078),45510,446)
+   alife():create("osoznanie_1",vector():set(-121.7327,-0.0033346,-226.4),118148,552)
+   alife():create("osoznanie_1",vector():set(-98.81,0.0247,-182.86),141302,440)
+   alife():create("osoznanie_1",vector():set(-203.18,0.1465,-221.312),33660,555)
+   alife():create("agr_spec",vector():set(-117.6894,5.3,-184.8),58888,667)
+end
+
+function agr_sold ()
+   alife():create("agr_spec_b",vector():set(60.94,-0.2,-13.458),297318,460)
+   alife():create("agr_spec_b",vector():set(7.9,-0.2,-12.83),247953,465)
+   alife():create("agr_spec_b",vector():set(58.7,-0.2,30.02),295376,461)
+   alife():create("agr_spec_b",vector():set(-7.8541,-0.2,27.98),232467,470)
+end
+
+function spawn_x18_tormoz ()
+   alife():create("zp_zombie_3",vector():set(-2.0437,9.3133,-2.234),2795,1109)
+   alife():create("zp_zombie_8",vector():set(-3.68578,6.688788,1.759),2208,1111)
+   alife():create("zp_zombie_1",vector():set(-11.13,4.385,-3.39456),1561,1166)
+   alife():create("zp_zombie_10",vector():set(-0.55,4.19,-12.593),2663,1127)
+   alife():create("zp_zombie_4",vector():set(-0.07,-0.08,-12.22),2666,1129)
+   alife():create("zp_zombie_7",vector():set(-5.59,-8.31,-14.981),2006,1132)
+   alife():create("zp_zombie_9",vector():set(27.85,-10.8,0.947),6776,1137)
+end
+
+function narod ()
+   alife():create("agr_spec",vector():set(53.261,9.313,621.515),339249,211)
+   alife():create("agr_spec",vector():set(-25.681,-11.350,-93.888),251079,111)
+   alife():create("agr_spec",vector():set(-46.525,-10.038,-68.204),233051,77)
+   alife():create("agr_spec",vector():set(-81.780,-9.914,-165.740),185443,107)
+   alife():create("esc_save_stalker",vector():set(-203.852,-20.377,-147.693),49118,46)
+   alife():create("agr_spec",vector():set(64.079,1.663,453.590),353686,199)
+   alife():create("agr_spec",vector():set(173.503,5.995,310.471),476478,237)
+   alife():create("agr_spec",vector():set(-5.842,0.635,256.127),271431,183)
+   alife():create("agr_spec",vector():set(54.835,1.295,162.802),340527,97)
+   alife():create("agr_spec",vector():set(-21.051,2.039,104.670),256257,86)
+   alife():create("agr_spec",vector():set(-74.405,-3.261,89.903),197142,84)
+   alife():create("agr_spec",vector():set(129.151,-7.570,-23.419),433509,131)
+   alife():create("agr_spec",vector():set(105.037,-7.718,-16.006),340527,97)
+   alife():create("osoznanie_4",vector():set(68.585,4.886,585.596),359471,215)
+   alife():create("osoznanie_1",vector():set(-61.355,-9.996,-53.712),214825,77)
+   alife():create("osoznanie_4",vector():set(-58.686,-15.536,-162.119),218529,107)
+   alife():create("osoznanie_6",vector():set(-149.504,-16.583,-147.629),100340,45)
+   alife():create("osoznanie_4",vector():set(115.559,1.808,466.940),418621,221)
+   alife():create("osoznanie_1",vector():set(139.461,-0.183,332.062),444244,235)
+   alife():create("osoznanie_8",vector():set(-5.293,0.636,291.287),271477,187)
+   alife():create("osoznanie_4",vector():set(54.883,-0.596,107.350),340456,162)
+   alife():create("osoznanie_1",vector():set(-2.756,2.582,83.928),273931,85)
+   alife():create("osoznanie_6",vector():set(-97.174,3.305,111.810),162498,84)
+   alife():create("osoznanie_8",vector():set(146.399,-7.937,-22.231),450928,131)
+   alife():create("osoznanie_4",vector():set(76.214,-8.217,-16.431),368952,114)
+   alife():create("agr_spec",vector():set(102.93,-6.10,-28.97),433509,131)
+   alife():create("agr_spec",vector():set(73.21,-7.38,-30.18),340527,97)
+end
+
+function AES ()
+   alife():create("agr_spec",vector():set(936.804,-0.100,-193.613),416041,2285)
+   alife():create("agr_spec",vector():set(925.185,-0.002,-34.210),409862,2293)
+   alife():create("agr_spec",vector():set(833.605,-0.099,-111.483),361930,2308)
+   alife():create("agr_spec",vector():set(800.581,-0.0004,-209.219),347223,2289)
+   alife():create("agr_spec",vector():set(682.335,-0.101,-42.707),295119,2299)
+   alife():create("agr_spec",vector():set(400.003,-0.003,-87.937),174126,2386)
+   alife():create("agr_spec",vector():set(-5.842,0.635,256.127),271431,183)
+   alife():create("agr_spec",vector():set(366.772,-0.093,-95.887),157360,2351)
+   alife():create("agr_spec",vector():set(323.247,-0.006,-64.029),136699,2382)
+   alife():create("osoznanie_1",vector():set(921.809,-0.099,-117.878),407188,2274)
+   alife():create("osoznanie_8",vector():set(878.058,-0.107,-40.579),381830,2293)
+   alife():create("osoznanie_6",vector():set(783.197,-0.001,-126.451),339691,2309)
+   alife():create("osoznanie_4",vector():set(738.301,-0.099,-194.571),320029,2311)
+   alife():create("osoznanie_4",vector():set(615.806,-0.101,-41.958),268940,2301)
+   alife():create("osoznanie_6",vector():set(379.046,-0.0005,-10.376),163731,2383)
+   alife():create("osoznanie_8",vector():set(397.008,-0.001,-7.383),173276,2383)
+end
+
+function post ()
+   alife():create("osoznanie_7",vector():set(-134.2,-30.47,-329.22),116628,100)
+   alife():create("osoznanie_7",vector():set(-173.614,-30.4,-330.112),76423,34)
+end
+
+function zastava ()
+   alife():create("agr_spec",vector():set(-154.84,-29.424263,-378.903),94825,15)
+end
+
+function postb ()
+   alife():create("esc_voen_pizdelushkin",vector():set(-161.873,-30.3,-354.38),87748,33)
+   alife():create("esc_voen_pizdelushkin",vector():set(-150.5465,-30.35,-352.76),99327,33)
+end

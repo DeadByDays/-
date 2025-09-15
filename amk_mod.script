@@ -1,0 +1,370 @@
+--/amk_rel_1/
+local nrg,med,cnt
+
+
+function spawn_gauss_merc(npc)
+	amk.add_spot_on_map(npc:id(), "red_location", "killer")
+	amk.clear_npc_inventory(npc)
+	amk.spawn_item_in_inv("wpn_gauss",npc)
+	amk.spawn_ammo_in_inv("ammo_gauss",10,npc)
+	amk.set_npc_community(npc,"stalker")
+	amk.save_variable("npc_to_move",npc:id())
+	--amk.make_suicide(npc)
+end
+
+
+
+
+
+
+
+
+--первый запуск мода
+function first_run() 
+
+  amk.g_start_timer("gg_need_sleep",0,0,6)
+		amk.g_start_timer("show_news",0,0,20)
+		amk.spawn_item_in_inv("matras")
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--новости
+function show_news()
+	
+	local when,where,text,mat = amk_news_lists.get_strings()
+	local name,sname = amk_names_lists.get_strings()
+	local reason,dead = amk_death_lists.get_strings()
+	local uniq=amk_uniq_news_lists.get_strings()
+		
+		
+		
+		if math.random(0,1)>0.5 then
+		when,where = where,when
+	end
+	if math.random(0,1)>0.8 then
+		name=""
+	end
+
+	if math.random(0,1)>0.1 then
+		mat=""
+end
+
+if math.random(0,1)>0.4 then
+		if math.random(0,1)>0.4 then
+			amk.send_tip(when.." "..where.." "..text.." "..mat,name.." "..sname,nil,15)
+		else
+			amk.send_tip(name.." "..sname..". "..dead..". "..reason,"Погиб сталкер:",nil,10,"death")
+end
+			else
+		amk.send_tip(uniq,name.." "..sname,nil,15)
+end
+	amk.g_start_timer("show_news",0,0,math.random(40,80))
+	--amk.g_start_timer("show_news",0,0,2,"show")
+end
+-------------------
+
+
+
+
+
+
+
+
+--сон
+function reduce_need_sleep(time)
+	local tmp=amk.load_variable("gg_need_sleep",0)
+	tmp=tmp-time*120
+	if tmp<0 then tmp=0 end
+	amk.save_variable("gg_need_sleep_nrg",0)
+	amk.save_variable("block_sleep_menu",0)
+	amk.save_variable("gg_need_sleep",tmp)
+	test_sleep_pp()
+end
+
+function test_for_need_sleep()
+	
+	if sleep_manager.is_sleep_active() == false then 
+		amk.save_variable("gg_need_sleep",amk.load_variable("gg_need_sleep",0)+1) 
+		test_sleep_pp()
+	end
+	
+	amk.g_start_timer("gg_need_sleep",0,0,6)
+	
+end
+
+function test_sleep_pp()
+	local tmp=amk.load_variable("gg_need_sleep",0)
+	if tmp>360 then
+		sleep_manager.main(5+amk.load_variable("gg_need_sleep_nrg",0))
+	end
+	if tmp>300 then
+		level.add_pp_effector("yantar_underground_psi.ppe", 999, true)
+		level.set_pp_effector_factor(999, 5.0)	
+	end
+	if tmp<=300 then
+		level.remove_pp_effector(999)
+	end
+end
+
+function check_sleep_item(obj)
+
+	local section = obj:section()
+	local stype=nil
+	if section=="energy_drink" then
+		stype="nrg"
+	elseif (section=="medkit" or section=="medkit_army" or section=="medkit_scientic") then
+		stype="med"
+	elseif section=="matras" then
+		stype="matras"
+	end
+	
+	if stype~=nil then
+		amk.start_timer("sleep_"..stype,0.1,obj:id())
+	end
+
+end
+
+function test_for_need_sleep_nrg(oid)
+	if alife():object(oid)==nil then
+		local n=amk.load_variable("gg_need_sleep_nrg",0)
+		if n<3 then
+			amk.save_variable("gg_need_sleep_nrg",n+1)
+			amk.save_variable("gg_need_sleep",amk.load_variable("gg_need_sleep",0)-30+n*10) 
+			test_sleep_pp()
+		end
+		
+		amk.g_start_timer("block_sleep_menu",0,1,0)
+		amk.save_variable("block_sleep_menu",1)
+	end
+end
+function test_for_need_sleep_med(oid)
+	if alife():object(oid)==nil then
+		amk.save_variable("gg_need_sleep",amk.load_variable("gg_need_sleep",0)+3) 
+		test_sleep_pp()
+	end
+end
+function test_for_need_sleep_matras(oid)
+	if alife():object(oid)==nil then
+		if amk.load_variable("block_sleep_menu",0)==0 then
+			local spwn=ui_cheat.cheat(get_hud())
+			level.start_stop_menu(spwn,true)
+		else
+			amk.send_tip("Меченый не может спать из-за действия энергетика","Сообщение",nil,5)
+		end
+		amk.spawn_item_in_inv("matras")
+	end
+end
+----------------------
+
+-------------багфикс радара-------------------
+function check_radar_off()
+	if (level.name() == "l10_radar") then
+		if not has_alife_info("bar_deactivate_radar_done") then
+			local pos = db.actor:position()
+			if pos.z>65 and pos.x>350 and pos.x<410 then
+				if amk.load_variable("radar_fix",0)==0 then
+					level.add_pp_effector("fire_hit.ppe", 1523, true)
+					level.set_pp_effector_factor(1523, 0.5)
+					amk.save_variable("radar_fix",1)
+					amk.start_timer("radar_fix",5)
+				end
+			end
+		end
+	end
+end
+
+function radar_fix()
+	level.remove_pp_effector(1523)
+	local pos = db.actor:position()
+	if pos.z>65 and pos.x>350 and pos.x<410 then
+		db.actor:kill(db.actor)
+	end
+	amk.del_variable("radar_fix")
+end
+----------------- end -------------
+

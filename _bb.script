@@ -1,0 +1,383 @@
+MODDERS!!! This file is for you. If you want to try and get attachable grenade launchers to induce the gory 
+explosion effects you see with the grenades and RPG-type weapons, below is some code which I have tried to 
+get working, but have been unsuccessful in doing so. If YOUR skills in scripting exceed mine, please do try 
+and make this work, and if you succeed, PLEASE DO send me the code to my e-mail: arnalp@live.com
+
+You will be properly credited as one of the main contributors to this mod.
+
+
+---------------------------------------------------------
+
+function HitByGL()
+
+	local cur_anim = db.actor:active_item():action_animation
+
+	if cur_anim == anim_idle_g
+	or cur_anim == anim_idle_g_aim
+	or cur_anim == anim_reload_g
+	or cur_anim == anim_shoot_g
+	or cur_anim == anim_switch_grenade_on
+	or cur_anim == anim_switch_grenade_off
+	or cur_anim == anim_draw_g
+	or cur_anim == anim_holster_g then
+		return true
+	else
+		return false
+	end
+end
+
+---------------------------------------------------------
+
+function Killed_By_GL(victim, who)
+	local npc = db.storage[npc:id()].death
+	if npc then
+		if npc.killer == wpn_fake_missile or
+		if npc.killer == wpn_fake_missile1 or
+		if npc.killer == wpn_fake_missile2 then
+			return true
+		else
+			return false
+		end
+	end
+end
+
+---------------------------------------------------------
+
+--local cur_anim = db.actor:active_item():animation:state()
+--local cur_anim = db.actor:active_item():state_lib.states[target_state].animation
+
+function HitOOOOOOOByGL()
+	if cur_anim == anim_idle_g
+	or cur_anim == anim_idle_g_aim
+	or cur_anim == anim_reload_g 
+	or cur_anim == anim_shoot_g
+	or cur_anim == anim_switch_grenade_on
+	or cur_anim == anim_switch_grenade_off
+	or cur_anim == anim_draw_g
+	or cur_anim == anim_holster_g then
+		return true
+	else
+		return false
+	end
+end
+
+---------------------------------------------------------
+
+local cur_anim = db.actor:active_item():action_animation
+
+function HitByGL()
+	if cur_anim == anim_idle_g
+	or cur_anim == anim_idle_g_aim
+	or cur_anim == anim_reload_g 
+	or cur_anim == anim_shoot_g
+	or cur_anim == anim_switch_grenade_on
+	or cur_anim == anim_switch_grenade_off
+	or cur_anim == anim_draw_g
+	or cur_anim == anim_holster_g then
+		return true
+	else
+		return false
+	end
+end
+
+---------------------------------------------------------
+
+-- Works, but the wpn2 group causes regular bullets to induce explosion.
+
+function npcondeath(victim, who)
+
+local effect_for_wpn = {
+["wpn_rg-6"]	= "gore_efx\\gore_explode",
+wpn_rg6_m1	= "gore_efx\\gore_explode",
+wpn_rpg7	= "gore_efx\\gore_explode",
+grenade_f1	= "gore_efx\\gore_explode",
+grenade_rgd5	= "gore_efx\\gore_explode"
+}
+
+local effect_for_wpn2 = {
+wpn_abakan	= "gore_efx\\gore_explode",
+wpn_abakan_m1	= "gore_efx\\gore_explode",
+wpn_abakan_m2	= "gore_efx\\gore_explode",
+wpn_ak74	= "gore_efx\\gore_explode",
+wpn_ak74_m1	= "gore_efx\\gore_explode",
+wpn_fn2000	= "gore_efx\\gore_explode",
+wpn_g36		= "gore_efx\\gore_explode",
+wpn_groza	= "gore_efx\\gore_explode",
+wpn_groza_m1	= "gore_efx\\gore_explode",
+wpn_l85		= "gore_efx\\gore_explode",
+wpn_l85_m1	= "gore_efx\\gore_explode",
+wpn_l85_m2	= "gore_efx\\gore_explode",
+wpn_lr300	= "gore_efx\\gore_explode",
+wpn_lr300_m1	= "gore_efx\\gore_explode",
+wpn_sig550	= "gore_efx\\gore_explode",
+wpn_sig_m1	= "gore_efx\\gore_explode",
+wpn_sig_m2	= "gore_efx\\gore_explode"
+}
+
+	if db.actor ~= nil and who:id() == db.actor:id() then
+		local cur_weapon = db.actor:active_item()
+		if cur_weapon ~= nil then
+			local cur_weapon_sec = cur_weapon:section()
+			local victim_pos = victim:position()
+			local npc_pos = vector():set(victim_pos.x, victim_pos.y + 1, victim_pos.z)
+			if effect_for_wpn[cur_weapon_sec] ~= nil then
+				if IsStalker(victim) then
+					action(victim,particle(effect_for_wpn[cur_weapon_sec],"bip01_head",particle_params(vector():set(0, 0, 0.3),vector():set(0, 0, 0),vector():set(1, 0, 0)), false),cond(cond.time_end, 1000))
+				else
+					local bb_particle = particles_object(effect_for_wpn[cur_weapon_sec])
+					bb_particle:play_at_pos(npc_pos)
+				end
+			elseif effect_for_wpn2[cur_weapon_sec] ~= nil then
+				local h = hit()
+				if IsStalker(victim) then
+					if victim_pos.hit and h.type == hit.explosion then -- and victim_pos:hit(h) then
+						action(victim,particle(effect_for_wpn[cur_weapon_sec],"bip01_head",particle_params(vector():set(0, 0, 0.3),vector():set(0, 0, 0),vector():set(1, 0, 0)), false),cond(cond.time_end, 1000))
+					end
+				else
+					if victim.hit and h.type ~= hit.chemical_burn then -- and npc:hit(h) then
+						local bb_particle2 = particles_object(effect_for_wpn2[cur_weapon_sec])
+						bb_particle2:play_at_pos(npc_pos)
+					end
+				end
+			end
+		end
+	end
+end
+
+--- doesn't work!
+
+---------------------------------------------------------
+
+function npcbleed(npc)
+
+local effect_for_wpn2 = {
+wpn_abakan	= "anomaly2\\body_tear_03",
+wpn_abakan_m1	= "anomaly2\\body_tear_03",
+wpn_abakan_m2	= "anomaly2\\body_tear_03",
+wpn_ak74	= "anomaly2\\body_tear_03",
+wpn_ak74_m1	= "gore_efx\\gore_explode",
+wpn_fn2000	= "anomaly2\\body_tear_03",
+wpn_g36		= "anomaly2\\body_tear_03",
+wpn_groza	= "anomaly2\\body_tear_03",
+wpn_groza_m1	= "anomaly2\\body_tear_03",
+wpn_l85		= "anomaly2\\body_tear_03",
+wpn_l85_m1	= "anomaly2\\body_tear_03",
+wpn_l85_m2	= "anomaly2\\body_tear_03",
+wpn_lr300	= "anomaly2\\body_tear_03",
+wpn_lr300_m1	= "anomaly2\\body_tear_03",
+wpn_sig550	= "anomaly2\\body_tear_03",
+wpn_sig_m1	= "anomaly2\\body_tear_03",
+wpn_sig_m2	= "anomaly2\\body_tear_03"
+}
+
+local cur_weapon = db.actor:active_item()
+	if cur_weapon ~= nil then
+		local cur_weapon_sec = cur_weapon:section()
+		local npc_id = db.storage[npc:id()]
+		if npc_id.wounded ~= nil then
+			action(npc_id,particle(effect_for_wpn2[cur_weapon_sec],"bip01_head",particle_params(vector():set(0,0,0.3),vector():set(0,0,0),vector():set(1,0,0)), false),cond(cond.time_end, 1000))
+			wait(50)
+			action(npc_id,particle(effect_for_wpn2[cur_weapon_sec],"bip01_head",particle_params(vector():set(0,0,0.3),vector():set(0,0,0),vector():set(1,0,0)), false),cond(cond.time_end, 1000))
+			wait(50)
+			action(npc_id,particle(effect_for_wpn2[cur_weapon_sec],"bip01_head",particle_params(vector():set(0,0,0.3),vector():set(0,0,0),vector():set(1,0,0)), false),cond(cond.time_end, 1000))
+			wait(50)
+			action(npc_id,particle(effect_for_wpn2[cur_weapon_sec],"bip01_head",particle_params(vector():set(0,0,0.3),vector():set(0,0,0),vector():set(1,0,0)), false),cond(cond.time_end, 1000))
+			wait(50)
+			action(npc_id,particle(effect_for_wpn2[cur_weapon_sec],"bip01_head",particle_params(vector():set(0,0,0.3),vector():set(0,0,0),vector():set(1,0,0)), false),cond(cond.time_end, 1000))
+		end
+	end
+end
+
+---------------------------------------------------------
+
+local effect_for_wpn = {
+
+-- Misc
+wpn_binoc		= "gore_efx\\gore_explode",
+wpn_bolt		= "gore_efx\\gore_explode",
+wpn_knife		= "gore_efx\\gore_explode",
+
+-- Explosives
+["wpn_rg-6"]		= "gore_efx\\gore_explode",
+wpn_rg6_m1		= "gore_efx\\gore_explode",
+wpn_rpg7		= "gore_efx\\gore_explode",
+grenade_f1		= "gore_efx\\gore_explode",
+grenade_rgd5		= "gore_efx\\gore_explode",
+
+-- Pistols
+wpn_beretta		= "gore_efx\\gore_explode",
+wpn_colt1911		= "gore_efx\\gore_explode",
+wpn_colt_m1		= "gore_efx\\gore_explode",
+wpn_desert_eagle	= "gore_efx\\gore_explode",
+wpn_eagle_m1		= "gore_efx\\gore_explode",
+wpn_fort		= "gore_efx\\gore_explode",
+wpn_fort_m1		= "gore_efx\\gore_explode",
+wpn_pb			= "gore_efx\\gore_explode",
+wpn_pm			= "gore_efx\\gore_explode",
+wpn_sig220		= "gore_efx\\gore_explode",
+wpn_usp			= "gore_efx\\gore_explode",
+wpn_walther		= "gore_efx\\gore_explode",
+wpn_walther_m1		= "gore_efx\\gore_explode",
+
+-- SMGs
+wpn_mp5			= "gore_efx\\gore_explode",
+wpn_mp5_m1		= "gore_efx\\gore_explode",
+wpn_mp5_m2		= "gore_efx\\gore_explode",
+
+-- Shotguns
+wpn_bm16		= "gore_efx\\gore_explode",
+wpn_spas12		= "gore_efx\\gore_explode",
+wpn_spas12_m1		= "gore_efx\\gore_explode",
+wpn_wincheaster1300	= "gore_efx\\gore_explode",
+wpn_winchester_m1	= "gore_efx\\gore_explode",
+
+-- Rifles
+wpn_abakan		= "gore_efx\\gore_explode",
+wpn_abakan_m1		= "gore_efx\\gore_explode",
+wpn_abakan_m2		= "gore_efx\\gore_explode",
+wpn_ak74		= "gore_efx\\gore_explode",
+wpn_ak74_m1		= "gore_efx\\gore_explode",
+wpn_ak74u		= "gore_efx\\gore_explode",
+wpn_ak74u_m1		= "gore_efx\\gore_explode",
+wpn_fn2000		= "gore_efx\\gore_explode",
+wpn_g36			= "gore_efx\\gore_explode",
+wpn_gauss		= "gore_efx\\gore_explode",
+wpn_groza		= "gore_efx\\gore_explode",
+wpn_groza_m1		= "gore_efx\\gore_explode",
+wpn_l85			= "gore_efx\\gore_explode",
+wpn_l85_m1		= "gore_efx\\gore_explode",
+wpn_l85_m2		= "gore_efx\\gore_explode",
+wpn_lr300		= "gore_efx\\gore_explode",
+wpn_lr300_m1		= "gore_efx\\gore_explode",
+wpn_sig550		= "gore_efx\\gore_explode",
+wpn_sig_m1		= "gore_efx\\gore_explode",
+wpn_sig_m2		= "gore_efx\\gore_explode",
+wpn_svd			= "gore_efx\\gore_explode",
+wpn_svd_m1		= "gore_efx\\gore_explode",
+wpn_svu			= "gore_efx\\gore_explode",
+wpn_val			= "gore_efx\\gore_explode",
+wpn_val_m1		= "gore_efx\\gore_explode",
+wpn_vintorez		= "gore_efx\\gore_explode"
+}
+
+local pParams = particle_params(vector():set(0,0,0.3),vector():set(0,0,0),vector():set(1,0,0))
+local gore_particle = particles_object("gore_efx\\gore_explode")
+local rg6_m1 = "wpn_rg6_m1"
+local rpg7 = "wpn_rpg7"
+local f1 = "grenade_f1"
+local rgd5 = "grenade_rgd5"
+
+function npcondeath(victim, who)
+	if db.actor ~= nil and who:id() == db.actor:id() then
+		local cur_weapon = db.actor:active_item()
+		if cur_weapon ~= nil then
+			if cur_weapon == rg6_m1
+			or cur_weapon == rpg7
+			or cur_weapon == f1
+			or cur_weapon == rgd5 then
+				local cur_weapon_sec = cur_weapon:section()
+				action(victim,particle(effect_for_wpn[cur_weapon_sec],"bip01_head",pParams,false),cond(cond.time_end,1))
+				-- wait(1)
+				if cur_weapon ~= rg6_m1
+				and cur_weapon ~= rpg7
+				and cur_weapon ~= f1
+				and cur_weapon ~= rgd5 then
+					gore_particle:stop()
+				end
+			end
+		end
+	end
+end
+
+---------------------------------------------------------
+
+--[[
+local pParams = particle_params(vector():set(0,0,0.3),vector():set(0,0,0),vector():set(1,0,0))
+
+function npcondeath(victim, who)
+	if db.actor ~= nil and who:id() == db.actor:id() then
+		local cur_weapon = db.actor:active_item()
+		if cur_weapon ~= nil then
+			local h = hit()
+			if victim.hit(h) then
+				if h.type ~= hit.chemical_burn then -- == hit.explosion then
+					action(victim, particle("gore_efx\\gore_explode", "bip01_head", pParams, false),cond(cond.time_end, 1000))
+				end
+			end
+		end
+	end
+end
+]]
+
+local pParams = particle_params(vector():set(0,0,0.3),vector():set(0,0,0),vector():set(1,0,0))
+
+function npcondeath(victim, who)
+	if db.actor ~= nil and who:id() == db.actor:id() then
+		--if not victim then
+			--return false
+		--end
+		npc:id() = victim:id()
+		local h = db.storage[npc:id()].hit
+		if h then
+			return h.who == db.actor:id() -- true if actor hitted the npc, false otherwise
+		end
+		return false
+	end
+	if h.who == db.actor:id() then
+	--if db.actor ~= nil and who:id() == db.actor:id() then
+		--if IsStalker(obj) then
+			--if obj ~= nil then
+				--local h = hit()
+				--if h.type ~= hit.chemical_burn then -- == hit.explosion then
+					action(victim, particle("gore_efx\\gore_explode", "bip01_head", pParams, false),cond(cond.time_end, 1000))
+				--end
+			--end
+		--end
+	end
+end
+
+---------------------------------------------------------
+
+--[[
+local pParams = particle_params(vector():set(0,0,0.3),vector():set(0,0,0),vector():set(1,0,0))
+
+function npcondeath(victim, who)
+	if db.actor ~= nil and who:id() == db.actor:id() then
+		local cur_weapon = db.actor:active_item()
+		if cur_weapon ~= nil then
+			local h = hit()
+			if victim.hit(h) then
+				if h.type ~= hit.chemical_burn then -- == hit.explosion then
+					action(victim, particle("gore_efx\\gore_explode", "bip01_head", pParams, false),cond(cond.time_end, 1000))
+				end
+			end
+		end
+	end
+end
+]]
+--[[
+local pParams = particle_params(vector():set(0,0,0.3),vector():set(0,0,0),vector():set(1,0,0))
+
+function npcondeath(victim, who)
+	if db.actor ~= nil and who:id() == db.actor:id() then
+		if not victim then
+			return false
+		end
+
+		-- npc:id() = victim:id()
+
+		local h = db.storage[victim:id()].hit
+		if h then
+			return h.who == db.actor:id() -- true if actor hitted the npc, false otherwise
+		end
+		return false
+
+		if h.who == db.actor:id() then
+			local h = hit()
+			if h.type == hit.explosion then
+				action(victim, particle("gore_efx\\gore_explode", "bip01_head", pParams, false),cond(cond.time_end, 1000))
+			end
+		end
+	end
+end
+]]

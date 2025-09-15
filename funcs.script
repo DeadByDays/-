@@ -1,0 +1,143 @@
+local timers={}		--хранит реал-тайм таймеры
+local g_timers={}		--хранит таймеры в игровом времени
+local timer_trigger=nil
+
+--старт таймера в реальном времени
+function start_timer(name,delay,action)
+	if not delay then
+		return false
+	end
+	
+	if not action then
+		action = ""
+	end
+
+    local time = game.time() --time in seconds since 1970
+	local a=1
+	while db.storage[db.actor:id()].pstor["tmr_"..a] do
+		a=a+1
+		if a>100 then 
+			return false 
+		end
+	end
+
+	save_variable("tmr_"..a, name)
+	save_variable("tmr_"..a.."_delay", time+delay*10000)
+	save_variable("tmr_"..a.."_params", action)
+	
+	return true
+end
+
+--старт таймера в игровом времени
+function g_start_timer(name,delay_d,delay_h,delay_m,action)
+    local time = level.get_time_days()*60*24+level.get_time_hours()*60+level.get_time_minutes()  --time in game minutes
+	if delay_d==nil or delay_h==nil or delay_m==nil then
+		return false
+	end
+	
+	if action==nil then
+		action = ""
+	end
+
+	local a=1
+	while db.storage[db.actor:id()].pstor["gtmr_"..a] do
+		a=a+1
+		if a>100 then 
+			return false 
+		end
+	end
+
+	save_variable("gtmr_"..a, name)
+	save_variable("gtmr_"..a.."_delay", time+delay_d*60*24+delay_h*60+delay_m)
+	save_variable("gtmr_"..a.."_params", action)
+
+	return true
+end
+
+--проверка таймеров, использует 3 следующие за ним функции для выбора действия
+function check_timers()
+	local tmp
+	for a=1,100,1 do
+		tmp=load_variable("tmr_"..a,nil)
+		if tmp~=nil then
+			__timer_found(a)	
+		end
+	end
+	
+	for a=1,100,1 do
+		tmp=load_variable("gtmr_"..a,nil)
+		if tmp~=nil then
+			__g_timer_found(a)	
+		end
+	end
+end
+function __timer_found(idx)
+    local time = game.time() --time in seconds since 1970
+	local name,params
+	if load_variable("tmr_"..idx.."_delay", nil)<=time then
+		name=load_variable("tmr_"..idx, nil)
+		params=load_variable("tmr_"..idx.."_params", nil)
+		del_variable("tmr_"..idx)
+		del_variable("tmr_"..idx.."_delay")
+		del_variable("tmr_"..idx.."_params")
+		__do_timer_action(name,params)
+		return true
+	end
+	return false
+end
+function __g_timer_found(idx)
+    local gtime = level.get_time_days()*60*24+level.get_time_hours()*60+level.get_time_minutes()  --time in game minutes
+	local name,params
+	if load_variable("gtmr_"..idx.."_delay", nil)<=gtime then
+		name=load_variable("gtmr_"..idx, nil)
+		params=load_variable("gtmr_"..idx.."_params", nil)
+		del_variable("gtmr_"..idx)
+		del_variable("gtmr_"..idx.."_delay")
+		del_variable("gtmr_"..idx.."_params")
+		__do_timer_action(name,params)
+		return true
+	end
+	return false
+end
+function __do_timer_action(select_string,params_string)
+
+local a
+	if select_string=="otf" then
+		a = level.object_by_id(tonumber(params_string))
+		a:set_condition((math.random(25)+40)/100)
+	end
+
+end
+
+--записываем переменную
+function save_variable(variable_name, value)
+	xr_logic.pstor_store(db.actor, variable_name, value)
+end
+
+--загружаем переменную
+function load_variable(variable_name, value_if_not_found)
+	return xr_logic.pstor_retrieve(db.actor, variable_name, value_if_not_found)
+end
+
+--удаляем переменную
+function del_variable(variable_name)
+	if db.storage[db.actor:id()].pstor[variable_name] then
+		db.storage[db.actor:id()].pstor[variable_name] = nil
+	end
+end
+
+function on_actor_update()
+	if not timer_trigger then 
+		timer_trigger=game.time() 
+	end
+	if timer_trigger<=game.time() then
+		timer_trigger=game.time()+5000
+		check_timers()
+	end
+end
+
+function on_game_load()
+	if db.storage[db.actor:id()].pstor == nil then
+		db.storage[db.actor:id()].pstor = {}
+	end
+end

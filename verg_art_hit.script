@@ -1,0 +1,65 @@
+local ver_art = {}
+
+function spawn_art() --вызываем при загрузке и после свпавна артов при выбросе
+	ver_art = {}
+	local sim = alife()
+	for i=1,65534 do
+		local sobj = sim:object(i)
+		if sobj and sobj.parent_id==65535 and string.find(sobj:section_name(),"^af_") then
+			ver_art[i]=true
+		end
+	end
+end
+
+function on_item_take(obj) -- при получении предмета
+	if ver_art[obj:id()] then
+		ver_art[obj:id()] = nil
+		
+		-- хитуем
+		db.actor.power = - 1
+		local h = hit()
+		h.draftsman = db.actor
+		h:bone("bip01_spine")
+		h.type = math.random(8)
+		h.power = 0.2
+		db.actor:hit(h)
+	
+		-- выкидываем оружие
+		local as=db.actor:active_slot()
+		if (as==1 or as==2) and math.random()>0.6 then
+			db.actor:drop_item(db.actor:active_item())
+		end
+		
+		-- случайная схема постпроцесса
+		this["scheme_"..math.random(4)]()
+	end
+end
+
+function scheme_1()
+	level.add_cam_effector("camera_effects\\surge_01.anm", 25, false, "")	--резкий рывок вправо
+	level.add_pp_effector("1.ppe", 2001, false)	--через промежуток двоение в глазах и белое блинкование
+			 
+	--get_console():execute("СХЕМА_1")
+end	
+
+function scheme_2()
+	level.add_cam_effector("camera_effects\\head_shot.anm", 26, false, "")	--резко болтануло. 
+	level.add_pp_effector("gar_ambush_hit.ppe", 2002, false)	--сначала двоится, потом полностью темнеет
+			 
+	--get_console():execute("СХЕМА_2")
+end
+
+function scheme_3()
+	level.add_cam_effector("camera_effects\\surge_02.anm", 27, false, "")	--хорошо мотонуло
+	level.add_pp_effector("surge_shock_old.ppe", 2003, false)	--экран двоится и темнеет несколько раз
+			 
+	--get_console():execute("СХЕМА_3")
+end
+
+function scheme_4()
+	level.add_pp_effector("blink.ppe", 2004, false)	--белая вспышка
+	level.add_cam_effector("camera_effects\\dream_1.anm", 28, false, "")	--отбрасывает назад и укладывает
+	level.add_cam_effector("camera_effects\\prison_1.anm", 29, false, "")	--пробуждение ото сна
+			 
+	--get_console():execute("СХЕМА_4")
+end

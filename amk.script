@@ -1,0 +1,563 @@
+--/amk_rel_1/
+----------------
+local npc_spawner={}	--служебный массив, работает автоматически - не трогать шаловливыми русками
+
+local timers={}		--хранит реал-тайм таймеры
+local g_timers={}	--хранит таймеры в игровом времени
+local markers={}	--хранит маркеры на карте
+local x_objs={}     --хранит ИДшники объектов
+local timer_trigger=nil
+
+--переменные для типсов
+pda_news = xr_sound.get_safe_sound_object([[device\pda\pda_news]])
+pda_tips = xr_sound.get_safe_sound_object([[device\pda\pda_tip]])
+pda_task = xr_sound.get_safe_sound_object([[device\pda\pda_objective]])
+
+tips_icons = {
+	default  = { 0, 658},
+	trader	 = { 332, 893},
+	dolg     = { 0, 658},
+	freedom  = { 0, 658},
+	ecolog   = { 498, 0},
+	arena    = { 332, 141},
+	stalker  = { 0, 658},
+	krot     = { 332, 47},
+	barman   = { 332, 235},
+	wolf	 = { 332, 940},
+	o_soznanie = { 498, 893},
+	monolith = { 0, 658},
+    saharov  = { 332, 470},
+    prizrak  = { 0, 658},
+    killer   = { 0, 658},
+	death     = { 0, 752}
+}
+----------------
+local bufferedmessages={}
+function mylog(msg)
+
+  if msg==nil then
+    return 
+  end
+  if db and db.actor then
+    if bufferedmessages then
+      for k,v in ipairs(bufferedmessages) do
+        db.actor:give_game_news(v, "ui\\ui_iconsTotal", Frect():set(0,658,83,47), 0, 15000)
+      end
+      bufferedmessages=nil
+    end
+  db.actor:give_game_news(msg, "ui\\ui_iconsTotal", Frect():set(0,658,83,47), 0, 15000)
+  else
+    if bufferedmessages then
+      table.insert(bufferedmessages,msg)
+    end
+  end
+  
+  if get_console() then
+    --get_console():execute("load "..msg)
+    get_console():execute("flush")
+  end
+end
+
+--показываем типс
+function send_tip(news_text, header, timeout, showtime, sender, sound)
+	if news_text==nil then return end
+	if header==nil then header=game.translate_string("st_tip") end
+	if timeout == nil then timeout = 0 end
+	if showtime == nil then showtime = 5 end
+	
+	local player
+	if sound=="news" then
+		player=pda_news
+	elseif sound=="task" then
+		player=pda_task
+	else
+		player=pda_tips
+	end		
+	
+	--' Играем дефолтный звук
+	player:play(db.actor, timeout, sound_object.s2d)
+	
+	if sender == nil then
+		sender = "default"
+	end
+	local x = tips_icons[sender][1]
+	local y = tips_icons[sender][2]
+	
+	local news_text = "%c[255,160,160,160]"..header.."\\n".."%c[default]"..news_text
+	db.actor:give_game_news(news_text, "ui\\ui_iconsTotal", Frect():set(x,y,83,47), timeout*1000, showtime*1000)
+	return true
+end
+
+function add_spot_on_map(obj_id,type,text)
+	--возможные типы type смотри в ui\map_spots.xml	
+	if obj_id then
+		if text==nil then text=" " end
+		
+		level.map_add_object_spot(obj_id, type, text)
+		save_variable("x_marker_type_"..obj_id, type)
+		save_variable("x_marker_text_"..obj_id, text)
+	end
+	end
+
+function remove_spot_from_map(obj_id,type)
+	if obj_id and level.map_has_object_spot(obj_id, type)~= 0 then
+		level.map_remove_object_spot(obj_id, type)
+		del_variable("x_marker_type_"..obj_id)
+		del_variable("x_marker_text_"..obj_id)
+	end
+end
+
+--старт таймера в реальном времени
+function start_timer(name,delay,action)
+	if not delay then
+		return false
+	end
+	
+	if not action then
+		action = ""
+	end
+
+    local time = game.time() --time in seconds since 1970
+	local a=1
+	while db.storage[db.actor:id()].pstor["x_timer_"..a] do
+		a=a+1
+		if a>100 then 
+			return false 
+		end
+	end
+
+	save_variable("x_timer_"..a, name)
+	save_variable("x_timer_"..a.."_delay", time+delay*10000)
+	save_variable("x_timer_"..a.."_params", action)
+	
+	return true
+end
+
+--старт таймера в игровом времени
+function g_start_timer(name,delay_d,delay_h,delay_m,action)
+    local time = level.get_time_days()*60*24+level.get_time_hours()*60+level.get_time_minutes()  --time in game minutes
+	if delay_d==nil or delay_h==nil or delay_m==nil then
+		return false
+	end
+	
+	if action==nil then
+		action = ""
+	end
+
+	local a=1
+	while db.storage[db.actor:id()].pstor["x_gtimer_"..a] do
+		a=a+1
+		if a>100 then 
+			return false 
+		end
+	end
+
+save_variable("x_gtimer_"..a, name)
+save_variable("x_gtimer_"..a.."_delay", time+delay_d*60*24+delay_h*60+delay_m)
+save_variable("x_gtimer_"..a.."_params", action)
+	return true
+
+
+
+end
+
+--проверка таймеров, использует 3 следующие за ним функции для выбора действия
+function check_timers()
+	local tmp
+	for a=1,100,1 do
+		tmp=load_variable("x_timer_"..a,nil)
+		if tmp~=nil then
+			__timer_found(a)	
+		end
+	end
+	
+	for a=1,100,1 do
+		tmp=load_variable("x_gtimer_"..a,nil)
+		if tmp~=nil then
+			__g_timer_found(a)	
+		end
+	end
+end
+function __timer_found(idx)
+    local time = game.time() --time in seconds since 1970
+	local name,params
+	if load_variable("x_timer_"..idx.."_delay", nil)<=time then
+		name=load_variable("x_timer_"..idx, nil)
+		params=load_variable("x_timer_"..idx.."_params", nil)
+	del_variable("x_timer_"..idx)
+del_variable("x_timer_"..idx.."_delay")
+del_variable("x_timer_"..idx.."_params")
+
+		__do_timer_action(name,params)
+		return true
+	end
+	return false
+end
+function __g_timer_found(idx)
+    local gtime = level.get_time_days()*60*24+level.get_time_hours()*60+level.get_time_minutes()  --time in game minutes
+	local name,params
+	if load_variable("x_gtimer_"..idx.."_delay", nil)<=gtime then
+		name=load_variable("x_gtimer_"..idx, nil)
+		params=load_variable("x_gtimer_"..idx.."_params", nil)
+		del_variable("x_gtimer_"..idx)
+		del_variable("x_gtimer_"..idx.."_delay")
+		del_variable("x_gtimer_"..idx.."_params")
+		__do_timer_action(name,params)
+		return true
+	end
+	return false
+end
+function __do_timer_action(select_string,params_string)
+	--[[
+	здесь описываем вызовы, оформялять в виде
+
+	if select_string=="название условия" then
+		<вызов сторонних функций>
+		-- можно передавать npc как параметр
+	end
+	
+	]]
+--user area	
+	if select_string=="show_news" then
+		amk_mod.show_news()
+	end
+	if select_string=="gg_need_sleep" then
+		amk_mod.test_for_need_sleep()
+	end
+	if select_string=="sleep_nrg" then
+		amk_mod.test_for_need_sleep_nrg(params_string)
+	end
+	if select_string=="sleep_med" then
+		amk_mod.test_for_need_sleep_med(params_string)
+	end
+	
+	
+	if select_string=="sleep_matras" then
+		amk_mod.test_for_need_sleep_matras(params_string)
+	end
+	if select_string=="block_sleep_menu" then
+		save_variable("block_sleep_menu",0)
+	end
+	if select_string=="radar_fix" then
+		amk_mod.radar_fix()
+	end
+	if string.find(select_string,"af_transform_")~=nil then
+		amk_mod.af_transform_done(params_string)
+	end
+-----------
+end
+--------------------------------------------------------------------------------------------------------------------
+
+--спавним объекты на карту
+--для спавна неписей смотрим config\creatures\spawn_sections.ltx - там написаны имена секций для разных типов неписей
+function spawn_item(spawn_item, pos)
+	return alife():create(spawn_item, pos, 1, db.actor:game_vertex_id())
+end
+
+--для спавна патронов используем spawn_ammo_in_inv
+function spawn_item_in_inv(spawn_item,npc)
+	if npc==nil then 
+		npc=db.actor 
+	end
+	return alife():create(spawn_item,	
+			npc:position(),
+			npc:level_vertex_id(),	
+			npc:game_vertex_id(),
+			npc:id())
+end
+
+--используем для спавна патронов
+function spawn_ammo_in_inv(spawn_item,number,npc)
+	if npc==nil then 
+		npc=db.actor 
+	end
+	if number > 0 then
+		return se_respawn.create_ammo(spawn_item,	
+				npc:position(),
+				npc:level_vertex_id(),	
+				npc:game_vertex_id(),
+				npc:id(),
+				number)
+	end
+end
+
+-- удаляем объект из игры
+function remove_item(remove_item)
+	if remove_item~=nil then
+		alife():release(alife():object(remove_item:id()), true)
+		return true
+	end
+	return false
+end
+
+-- выбрасываем объект из инвентаря, применимо к ГГ
+function drop_item(npc,item)
+	if item~=nil then
+	    npc:mark_item_dropped(item)
+	end
+end
+
+--убиваем непися
+function make_suicide(npc)
+	npc:kill(npc)
+end
+
+--узнаем отношение одного непися к другому
+function get_npc_relation(obj,target)
+	local rel = obj:relation(target)
+	local relation
+	if rel==game_object.neutral then
+		relation="neutral"
+	elseif rel==game_object.friend then
+		relation="friend"
+	elseif rel==game_object.enemy then
+		relation="enemy"
+	else
+		return false
+	end
+	return relation
+end
+
+--задаем отношение одного непися к другому
+function set_npc_relation(obj,target,relation)
+	local rel
+	if relation=="neutral" then
+		rel=game_object.neutral
+	elseif relation=="friend" then
+		rel=game_object.friend
+	elseif relation=="enemy" then
+		rel=game_object.enemy
+	else
+		return false
+	end	
+	obj:set_relation(rel,target)
+	return true
+end
+
+-- узнаем группировку непися, применимо к ГГ
+function get_npc_community(npc)
+	return npc:community()
+end
+
+-- выставляем группировку непися, можно ГГ
+function set_npc_community(npc,community_string)
+	--значения для community_string можно узнать в config\creatures\game_relations.ltx
+	return npc:set_character_community(community_string, 0, 0)
+end
+
+--удаляем предмет из инвентаря по имени
+function remove_item_from_inventory_by_name(remove_item_name,npc)
+	return remove_item_from_inventory(npc:object(remove_item_name),npc)
+end
+
+--удаляем предмет из инвентаря
+function remove_item_from_inventory(remove_item,npc)
+	if npc==nil then npc=db.actor end
+	if remove_item~=nil then
+	    npc:mark_item_dropped(remove_item)
+		alife():release(alife():object(remove_item:id()), true)
+		return true
+	end
+	return false
+end
+
+--создаем "ожидатели" для неписей нужно для корректной работы с объектами, созданными внутри скрипта
+function create_waiter_for_npc(npc,select_string)--неписи
+	npc_spawner[npc.id]=select_string
+end
+--
+
+--очищаем инвентарь непися, можно ГГ, использует следующую фунцию для удаления предмета
+function clear_npc_inventory(npc)
+    npc:iterate_inventory(__del_item, npc)
+end
+function __del_item(npc, item)
+    local section = item:section()
+
+    if section == "bolt" or section == "device_torch" then
+        return
+    end
+    npc:mark_item_dropped(item)
+    alife():release(alife():object(item:id()), true)
+end
+---------------------------
+
+--проверка запущена ли игра
+function check_game()
+	if level.present() and (db.actor ~= nil) and db.actor:alive() then
+		return true
+	end
+	return false
+end
+
+--записываем переменную
+function save_variable(variable_name, value)
+	xr_logic.pstor_store(db.actor, variable_name, value)
+end
+
+--загружаем переменную
+function load_variable(variable_name, value_if_not_found)
+	return xr_logic.pstor_retrieve(db.actor, variable_name, value_if_not_found)
+end
+
+--удаляем переменную
+function del_variable(variable_name)
+	if db.storage[db.actor:id()].pstor[variable_name] then
+		db.storage[db.actor:id()].pstor[variable_name] = nil
+	end
+end
+
+--определяем находится ли ГГ в определенной зоне
+function check_npc_in_box(npc, p1,p2)
+	local pos=npc:position()
+	if is_point_inside_interval(pos.x,p1.x,p2.x) and
+		is_point_inside_interval(pos.y,p1.y,p2.y) and
+		is_point_inside_interval(pos.z,p1.z,p2.z) then
+		return true
+	else
+		return false	
+	end
+end
+function is_point_inside_interval(x,p1,p2)
+	if p1>p2 then 
+		p1,p2 = p2,p1 
+	end
+	
+	if x>p1 and x<p2 then 
+		return true
+	else 
+		return false
+	end
+end
+----------------------------
+
+--инвентарное название объекта
+function get_inv_name(section)
+	return system_ini():r_string(section,"inv_name")
+end
+
+---------------------------------------------
+--callback section
+---------------------------------------------
+
+--колбэк на получение инфопоршена
+function on_info()
+end
+
+--колбэк на взятие предмета в инвентарь ГГ
+function on_item_take(obj)
+end
+
+--колбэк на взятие предмета в инвентарь ГГ из ящика
+function on_item_take_from_box(obj)
+end
+
+--колбэк на потерю предмета из инвентаря ГГ
+function on_item_drop(obj)
+	amk_mod.check_sleep_item(obj)
+end
+
+--колбэк на апдейт ГГ (удобно для проверки условий, так как вызывается постоянно, нельзя перегружать, а то будут лаги)
+function on_actor_upade()
+ --не удалять! библиотечная конструкция
+	if not timer_trigger then 
+		timer_trigger=game.time() 
+	end
+	if timer_trigger<=game.time() then
+		timer_trigger=game.time()+5000
+		check_timers()
+	end
+--user area	
+	amk_mod.check_radar_off()
+-----------
+end
+
+--колбэк на создание непися, использует следующую за ним функцию для выбора действия
+function on_npc_spawn(npc)
+	if npc == nil then return end
+	for k,v in pairs(npc_spawner) do
+		if k==npc:id() then 
+			__npc_spawn_case(npc,v)
+			npc_spawner[k]=nil
+			return
+		end
+	end
+end
+function __npc_spawn_case(npc,select_string)
+	--[[
+	здесь описываем вызовы, оформялять в виде
+
+	if select_string=="название условия" then
+		<вызов сторонних функций>
+		-- можно передавать npc как параметр
+	end
+	
+	]]
+--user area	
+	if select_string=="spawn_gauss_killer" then
+		amk_mod.spawn_gauss_merc(npc)
+	end
+-----------
+end
+-----------------------
+
+--колбэк на юзание объекта
+function on_use(victim, who)
+end
+
+--колбэк на смерть непися
+function on_death(victim, who)
+end
+
+--загружаем все переменные, которые нужно, вызывается загрузке игры, автоматически; вручную не вызывать
+function on_game_load()
+
+	if db.storage[db.actor:id()].pstor == nil then
+		db.storage[db.actor:id()].pstor = {}
+	end
+
+	--first run check section
+	if load_variable("x_first_run",true) then
+		--здесь выполняются действия, которые будут выполнены только один раз при первом запуске мода
+	
+		amk_mod.first_run()
+	
+		save_variable("x_first_run",false)	--не трогать!
+	end
+	
+	local tmp,tmp1
+	for a=1,65534,1 do
+		tmp=load_variable("x_marker_type_"..a,nil)
+		if tmp~=nil then
+			tmp1=load_variable("x_marker_text_"..a,nil)
+			level.map_add_object_spot(a, tmp, tmp1)
+		end
+	end
+	
+--user area	
+	amk_mod.test_sleep_pp()
+-----------
+	
+end
+
+--записываем все переменные, которые нужно, вызывается присохранении игры, автоматически; вручную не вызывать
+function on_game_save()	
+	
+end
+
+--------------------- user function section---------------
+
+--[[
+copiright © xStream
+
+MMMMMMM    MMMMM    MMMMMM  MMMMMMMMMMMMM  MMMMMMMMMMM     MMMMMMMMMMM    MMMMMM    MMMMMMM     MMMMMM
+ MMMMMMM MMMMMM  MMMMMMMMMM MMMMMMMMMMMMMM MMMMMMMMMMMMMM  MMMMMMMMMMM   MMMMMMMM   MMMMMMMM   MMMMMMM
+  MMMMMMMMMMMM  MMMMMMMMMMMM MMMMMMMMMMMMM  MMMMMMMMMMMMMM MMMMMMMMMMM   MMMMMMMM    MMMMMMMM MMMMMMMM
+   MMMMMMMMM     MMMMMMMM MMM   MMMMMMM     MMMMMMMMMMMMMM MMMMMMM      MMMMMMMMMM   MMMMMMMMMMMMMMMMM
+    MMMMMMM       MMMMMMM       MMMMMM      MMMMMMM  MMMMM MMMMMMM      MMMMMMMMMM   MMMMMMMMMMMMMMMMM
+    MMMMMMMM       MMMMMMM      MMMMMM      MMMMMMM MMMM   MMMMMMMMMM  MMMM MMMMMMM  MMMMMMMMMMMMMMMMM
+   MMMMMMMMMM        MMMMM      MMMMMM      MMMMMMMMMMM    MMMMMMM     MMMM  MMMMMM  MMMMMMMMMMMMMMMMM
+  MMMMM  MMMMM    MMMMMMMM      MMMMMM      MMMMMMMMMMMMMM MMMMMMMMMMM MMMMMMMMMMMMM MMMMM MMMMM MMMMM
+ MMMMM   MMMMMM    MMMMMM       MMMMMM      MMMMMMM MMMMM  MMMMMMMMMM MMMMMMM MMMMMM MMMM   MM   MMMM 
+ 
+]]
