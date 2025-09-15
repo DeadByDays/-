@@ -1,0 +1,210 @@
+--[[
+[================]
+C++ Programmer & Author: Werasik2aa
+Project Creator: Monokit
+Description: Client Callbacks.
+[================]
+--]]
+function OnConnected(state)
+    local mss = "Connected to server as"
+    local ass = state and "host!" or "client!"
+    news_manager.send_tip(db.actor, mss.." "..ass)
+    MPMain_STOGETHER.WaitMe = 99
+end
+
+function OnPlayerChangedLevel(PlayerNetID, SE_OBJ, NickName)
+    if not SE_OBJ then return end
+    log1("[Client] On Player Changed Level")
+    log1("[Client] NetID: "..tostring(PlayerNetID))
+    if db.actor then
+        local mss = "Player "..tostring(NickName).." changing level"
+        news_manager.send_tip(db.actor, mss)
+    end
+end
+
+function OnPlayerChatted(PlayerNetID, NickName, MSG)
+    local mss = NickName.."> "..tostring(MSG)
+    news_manager.send_tip(db.actor, mss)
+    local mchatclass = MChatbox_STOGETHER.GetChatBox()
+    if mchatclass then
+        mchatclass:AddMessage(mss)
+    end
+end
+
+function OnPlayerInteract(PlayerNetID, SE_OBJ, type)
+end
+
+function OnPlayerCustomAnimationItem(PlayerNetID, Delay, Force, obj_id)
+end
+
+function OnPlayerChangedVisual(PlayerNetID, SV_NAME)
+end
+
+function OnPlayerInfoPortion(PlayerNetID, info_id, state)
+end
+
+function OnEntitySpawned(se_obj)
+    if not se_obj then return end
+    MPMain_STOGETHER.AwaitThing = se_obj
+    --SendScriptCallBack("ServerSpawnedObject", se_obj)
+end
+
+function OnPlayerTaskUpdate(PlayerNetID, TaskID, TaskGIVER, TaskMID, TaskSTATE, TaskStage)
+    log1("-[Client] ~~~ On Player Task Update ~~~")
+    log1("[Client] PlayerID: "..tostring(PlayerNetID))
+    log1("[Client] TaskID: "..tostring(TaskID))
+    log1("[Client] Giver_ID: "..tostring(TaskGIVER))
+    log1("[Client] MapObject_ID: "..tostring(TaskMID))
+    log1("[Client] Task_State: "..tostring(TaskSTATE))
+    log1("[Client] Task_Stage: "..tostring(TaskStage))
+    local tm = task_manager.get_task_manager()
+    if tm.task_info[TaskID] then
+        tm.task_info[TaskID].current_target = TaskMID
+        tm.task_info[TaskID].task_giver_id = TaskGIVER
+        tm.task_info[TaskID].stage = TaskStage
+        if TaskSTATE == task.completed then
+            tm.task_info[TaskID].forced_status = "complete"
+        elseif TaskSTATE == task.fail then
+            tm.task_info[TaskID].forced_status = "fail"
+        end
+    end
+end
+
+function OnPlayerTaskGive(PlayerNetID, TaskID, TaskGIVER, TaskMID, TaskSTATE, TaskStage)
+    log1("-[Client] ~~~ On Player Task Give ~~~")
+    log1("[Client] PlayerID: "..tostring(PlayerNetID))
+    log1("[Client] TaskID: "..tostring(TaskID))
+    log1("[Client] Giver_ID: "..tostring(TaskGIVER))
+    log1("[Client] MapObject_ID: "..tostring(TaskMID))
+    log1("[Client] Task_State: "..tostring(TaskSTATE))
+    log1("[Client] Task_Stage: "..tostring(TaskStage))
+    local tm = task_manager.get_task_manager()
+    -- GIVE TASK
+    tm:give_task_client(TaskID, TaskGIVER < 65535 and TaskGIVER or nil)
+    -- UPDATE TASK
+    if tm.task_info[TaskID] then
+        tm.task_info[TaskID].current_target = TaskMID
+        if TaskSTATE == task.completed then
+            tm.task_info[TaskID].forced_status = "complete"
+        elseif TaskSTATE == task.fail then
+            tm.task_info[TaskID].forced_status = "fail"
+        end
+        tm.task_info[TaskID].stage = TaskStage
+        tm.task_info[TaskID].task_giver_id = TaskGIVER
+        if tm.task_info[TaskID].t then
+            tm.task_info[TaskID].t:change_map_location(tm.task_info[TaskID].spot, TaskMID)
+        end
+    end
+end
+
+function OnForcedTaskState(PlayerNetID, TaskID, TaskState)
+    log1("-[Client] ~~~ On Forced Task State ~~~")
+    log1("[Client] PlayerID: "..tostring(PlayerNetID))
+    log1("[Client] TaskID: "..tostring(TaskID))
+    log1("[Client] TaskState: "..tostring(TaskState))
+    local tm = task_manager.get_task_manager()
+    if tm.task_info[TaskID] then
+        tm.task_info[TaskID].forced_status = TaskState
+    end
+end
+
+function OnPlayerOpenDoor(PlayerNetID, DoorID, State)
+    local to = db.storage[DoorID]
+    local door = to and to.ph_door and to.ph_door.door_action
+    if not door or not door.open_door or not door.close_door then
+        log1("[Client] THIS DOOR DOESN'T EXIST")
+        return
+    end
+    -- get_wrapper of furniture? Just use this callback
+    log1("[Client] Player with NetID "..tostring(PlayerNetID).." Used doorID"..tostring(DoorID))
+    if State then
+        door:open_door(false)
+    else
+        door:close_door(false)
+    end
+end
+
+function OnPlayerSwitchButton(PlayerNetID, ButtonID)
+    local to = db.storage[ButtonID]
+    local button = to and to.ph_button and to.ph_button.button_action
+    if not button or not button.use_callback then
+        log1("[Client] THIS BUTTON DOESN'T EXIST")
+        return
+    end
+    log1("[Client] Player with NetID "..tostring(PlayerNetID).." Used buttonID"..tostring(ButtonID))
+    button:try_switch()
+end
+
+function OnPlaySound(Sound_Name, Position, NPID)
+    if not getFS():exist("$game_sounds$", Sound_Name) then
+        local obj = level.object_by_id(NPID)
+        if obj then
+            xr_sound.set_sound_play_client(obj, Sound_Name)
+        else
+            xr_sound.set_sound_play_client(db.actor, Sound_Name)
+        end
+        return
+    end
+    local snd = sound_object(Sound_Name)
+    if not snd then
+        log("![Client] Failed to play sound by path: "..tostring(Sound_Name))
+        return
+    end
+    log("[Client] Playing sound: "..tostring(Sound_Name))
+    local obj = level.object_by_id(NPID)
+    if obj then
+        snd:play_no_feedback(obj, 0, 0, Position, 1.0, 1.0)
+    else
+        snd:play_no_feedback(db.actor, 0, 0, Position, 1.0, 1.0)
+    end
+end
+
+function OnPlayerGetReward(PlayerNetID, Num)
+    log1("=[Client] On Player Get Reward")
+    log1("=[Client] PlayerID: "..tostring(PlayerNetID))
+    db.actor:give_money(Num)
+end
+
+function OnPlayerWantCompanion(PlayerNetID, id)
+    local npc = level.object_by_id(id)
+    local squad = npc and get_object_squad(npc)
+    if not (squad) then
+        return
+    end
+    axr_companions.companion_squads[squad.id] = squad
+    SIMBOARD:assign_squad_to_smart(squad, nil)
+    for k in squad:squad_members() do
+        local member = db.storage[k.id] and db.storage[k.id].object
+        if ( member and member:alive() ) then
+            axr_companions.add_to_actor_squad(member)
+        end
+    end
+end
+
+function OnPlayerNoWantCompanion(PlayerNetID, id)
+    local npc = level.object_by_id(id)
+    local squad = npc and get_object_squad(npc)
+	if squad then
+		squad.scripted_target = nil
+		axr_companions.companion_squads[squad.id] = nil
+		if _G.WARFARE then
+			sim_squad_warfare.set_target(squad, smart_terrain.nearest_to_actor_smart.id)
+		end
+	end
+	stalker_generic.remove_level_spot(npc:id())
+	axr_companions.non_task_companions[npc:id()] = nil
+	npc:disable_info_portion("npcx_is_companion")
+	npc:disable_info_portion("npcx_beh_cannot_dismiss")
+	xr_logic.restore_scheme_and_logic(npc)
+	local se_obj = alife_object(npc:id())
+	if not (se_obj) then
+		return
+	end
+	se_save_var(se_obj.id,se_obj:name(),"companion",nil)
+	se_save_var(se_obj.id,se_obj:name(),"companion_cannot_dismiss",nil)
+	se_save_var(se_obj.id,se_obj:name(),"companion_cannot_teleport",nil)
+end
+
+function OnReceivedCustomPacket(net_pak)
+    --SendScriptCallBack("OnReceivedCustomPacketClient", net_pak)
+end

@@ -1,0 +1,37 @@
+--[[
+[================]
+C++ Programmer & Author: Werasik2aa
+Project Creator: Monokit
+Description: Server Callbacks.
+[================]
+--]]
+local GameManager = SteamGameManager()
+local PlayerManager = GameManager:GetPlayerManager()
+function OnPlayerConnected(PlayerNetID, nickname)
+    log1("-[Server] Task data request from: PlayerID: "..tostring(PlayerNetID))
+    local tm = task_manager.get_task_manager()
+    for _, tma in pairs(tm.task_info) do
+        if tma.t then
+            PlayerManager:SyncTaskWith(PlayerNetID, tma.t, tma.current_title or "", tma.current_descr or "", tma.task_giver_id or 65535, tma.stage, false)
+        end
+    end
+end
+
+function OnPlayerDisconnected(PlayerNetID, NickName)
+    log1("[Server] On Player Disconnected")
+    log1("[Server] PlayerID: "..tostring(PlayerNetID))
+    log1("[Server] PlayerNA: "..tostring(NickName))
+end
+
+function OnPlayerChatted(PlayerNetID, NickName, MSG)
+    -- Chat commands can be here too
+end
+
+function IsUsedStorage(npc)
+    if not npc then return false end
+    return false
+end
+
+function OnReceivedCustomPacket(net_pak)
+    --SendScriptCallBack("OnReceivedCustomPacketServer", net_pak)
+end

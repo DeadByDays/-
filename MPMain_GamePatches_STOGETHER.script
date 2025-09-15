@@ -1,0 +1,456 @@
+--[[
+[================]
+C++ Programmer & Author: Werasik2aa
+Project Creator: Monokit
+Description: Main game patches. Basic anomaly functions and other things.
+Used to patch anomaly 1.5.3 script files.
+[================]
+--]]
+local GameManager = SteamGameManager()
+function start_game_callback()
+    MPMain_STOGETHER.on_game_start()
+    MPCallbacks_STOGETHER.on_game_start()
+    SendScriptCallback("on_game_start")
+end
+
+-- ACTOR NET CLIENT
+local OLDOITEMTAKECALL = bind_stalker.actor_binder.on_item_take
+local OLDOITEMDROPCALL = bind_stalker.actor_binder.on_item_drop
+local OLDNETSPAWNPCALL = bind_stalker.actor_binder.net_spawn
+local OLDNETDESPAPCALL = bind_stalker.actor_binder.net_destroy
+local OLDUPDATEPAPCALL = bind_stalker.actor_binder.update
+
+-- SOUND
+local OLDSETSOUNDPLAY = xr_sound.set_sound_play
+local OLDSETSOUND = xr_sound.set_sound
+
+-- TASK_MANAGER
+local OLDGIVETASKSNOW = task_manager.CRandomTask.action_give_task
+
+-- PATCHES
+local OLDDIALOGMGRLOAD = dialog_manager.load
+function Patch()
+    task_manager.get_task_manager = task_manager.get_random_task
+    if amk then
+        function task_manager.CRandomTask:action_give_task_client(actor, npc, p1, p2)
+            if IIsHost() or not self.task_info[self.task_id_by_yes_phrase_id[p2]] then
+                OLDGIVETASKSNOW(self, actor, npc, p1, p2)
+            end
+        end
+    else
+        function task_manager.CRandomTask:action_give_task_client(actor, npc, p1, p2)
+            local task = CGameTask()
+            printf("p1 = %s p2 = %s", tostring(p1), tostring(p2))
+            local task_desc = self.task_info[self.task_id_by_yes_phrase_id[p2]]
+            task:load(task_desc.complex_type)
+            task:set_title(task_desc.type)
+            local oo = task:get_objective(0)
+            oo:set_article_id(task_desc.description)
+            local objective = SGameTaskObjective(task, 1)
+            objective:set_description(task_desc.name)
+            --' Выбираем текущую цель квеста
+            if task_desc.target_objects ~= nil then
+                local rndnum = table.getn(task_desc.target_objects)
+                task_desc.selected_target = task_desc.target_objects[math.random(rndnum)]
+                printf("TARGET DEBUG INFO")
+                printf("selected = %s", tostring(task_desc.selected_target))
+                print_table(task_desc.target_objects)
+            end
+            if task_desc.type == "eliminate_lager" then
+                objective:set_map_hint(task_desc.text)
+                objective:set_map_location("eliminate_lager_location")
+                objective:set_object_id(task_desc.selected_target)
+            elseif task_desc.type == "defend_lager" then
+                objective:set_map_hint(task_desc.text)
+                objective:set_map_location("defend_lager_location")
+                objective:set_object_id(task_desc.selected_target)
+                -- PIZDAEB
+                local defend_object = alife():object(task_desc.selected_target)
+                local sm_ini = defend_object:spawn_ini()
+                task_desc.defend_target = utils.cfg_get_number(sm_ini, "random_task", "defend_target", nil, true)
+            elseif task_desc.type == "kill_stalker" then
+                objective:set_map_hint(task_desc.text)
+                objective:set_map_location("kill_stalker_location")
+                objective:set_object_id(task_desc.selected_target)
+            elseif task_desc.type == "find_item" then
+                objective:set_map_hint(task_desc.text)
+                objective:set_map_location("find_item_location")
+                objective:set_object_id(task_desc.selected_target)
+            end
+            objective:add_complete_func("task_manager.task_complete")
+            task:add_objective(objective)
+            if task_desc.need_return then
+                local story_by_parent = { trader = 003, barman = 500, ecolog = 902, dolg = 507, freedom = 707,
+                    wolf = 006, shustriy = 004, drunk_dolg = 510, hunter = 504, zastava_commander = 518,
+                    petrenko = 506, lisiy = 607, mercenary = 515
+                }
+                local return_task_by_type = {
+                    eliminate_lager = "return_for_reward",
+                    defend_lager = "return_for_reward",
+                    kill_stalker = "return_for_reward",
+                    artefact = "return_for_reward_bring",
+                    monster_part = "return_for_reward_bring",
+                    find_item = "return_for_reward_bring"
+                }
+                objective = SGameTaskObjective(task, 2)
+                objective:set_description(return_task_by_type[task_desc.type])
+                objective:set_map_hint(return_task_by_type[task_desc.type])
+                objective:set_map_location("blue_location")
+                local storyidbp = story_by_parent[task_desc.parent]
+                if storyidbp then
+                    local se_obj = alife():story_object(tonumber(storyidbp))
+                    if se_obj then objective:set_object_id(se_obj.id) end
+                end
+                task:add_objective(objective)
+            end
+
+            local time = 0
+            if task_desc.time ~= nil then
+                time = task_desc.time * 1000
+            end
+            db.actor:give_task(task, time, false)
+
+            --' дизаблим все остальные задания данного типа, так как игрок не может одновременно обладать двумя заданиями одного типа.
+            self.task_info[self.task_id_by_yes_phrase_id[p2]].status = "selected"
+            self.active_task_by_type[task_desc.complex_type] = self.task_id_by_yes_phrase_id[p2]
+            for k, v in pairs(self.task_info) do
+                if v.complex_type == task_desc.complex_type then
+                    v.enabled = false
+                end
+            end
+        end
+        function task_manager.CRandomTask:load(p)
+            printf("^^^ LOAD")
+            --' Считаем количество записей
+            local i = p:r_u8()
+            for k = 1, i do
+                local id = p:r_stringZ()
+                local tmi = self.task_info[id]
+                tmi.enabled = p:r_bool()
+                tmi.enabled_props = p:r_bool()
+                tmi.status = p:r_stringZ()
+
+                local selected_target = p:r_u32()
+                if selected_target ~= -1 then
+                    tmi.selected_target = selected_target
+                end
+                tmi.last_task_time = utils.r_CTime(p)
+                if tmi.type == "defend_lager" then
+                    local defend_object = alife():object(tmi.selected_target or 0)
+                    if defend_object then
+                        local sm_ini = defend_object:spawn_ini()
+                        tmi.defend_target = utils.cfg_get_number(sm_ini, "random_task", "defend_target", nil, true)
+                    end
+                end
+            end
+            --' Та же самая процедура с активными тасками
+            local i = p:r_u8()
+            for k = 1, i do
+                local id = p:r_stringZ()
+                self.active_task_by_type[id] = p:r_stringZ()
+            end
+        end
+    end
+    function task_manager.CRandomTask:action_give_task(actor, npc, p1, p2)
+        local dryfear = self.task_info[self.task_id_by_yes_phrase_id[p2]]
+        self:action_give_task_client(actor, npc, p1, p2)
+        if dryfear then return end
+        local tma = self.task_info[self.task_id_by_yes_phrase_id[p2]]
+        GameManager:OnIGetTask(tma.t, tma.current_title or "", tma.current_descr or "", tma.task_giver_id or 65535,
+            tma.stage, true)
+        return true
+    end
+    function bind_stalker.actor_binder:update(a)
+        OLDUPDATEPAPCALL(self, a)
+        if not self.fupda then
+            self.fupda = true
+            SendScriptCallback("actor_on_first_update")
+        end
+        SendScriptCallback("actor_on_update")
+    end
+    function bind_stalker.actor_binder:on_item_take(obj)
+        OLDOITEMTAKECALL(self, obj)
+        SendScriptCallback("actor_on_item_take", obj)
+    end
+    function bind_stalker.actor_binder:on_item_drop(obj)
+        OLDOITEMDROPCALL(self, obj)
+        SendScriptCallback("actor_on_item_drop", obj)
+    end
+    function bind_stalker.actor_binder:net_destroy()
+        OLDNETDESPAPCALL(self)
+        SendScriptCallback("actor_on_net_destroy")
+    end
+    function bind_stalker.actor_binder:net_spawn(data)
+        local state = OLDNETSPAWNPCALL(self, data)
+        if state then SendScriptCallback("on_game_load") end
+        return state
+    end
+    _G.vec_to_str = function(vector) -- переводит вектор в строку.
+        if vector == nil then return "nil" end
+        return string.format("[%s:%s:%s]", vector.x, vector.y, vector.z)
+    end
+    _G.printf = function(fmt, ...) -- formatted logging
+        if not (fmt) then return end
+        local fmt = tostring(fmt)
+        if (select('#', ...) >= 1) then
+            local i = 0
+            local p = { ... }
+            local function sr(a)
+                i = i + 1
+                if (type(p[i]) == 'userdata') then
+                    if (p[i].x and p[i].y) then
+                        return vec_to_str(p[i])
+                    end
+                    return 'userdata'
+                end
+                return tostring(p[i])
+            end
+            fmt = string.gsub(fmt, "%%s", sr)
+        end
+        log(fmt)
+    end
+    dialogs.actor_has_item = function(first_speaker, second_speaker, section)
+        return xr_conditions.actor_has_item(first_speaker, second_speaker, { tostring(section) })
+    end
+    xr_conditions.actor_has_decoder = function(actor, npc)
+        return xr_conditions.actor_has_item(actor, npc, { "decoder" })
+    end
+    xr_conditions.i_has_item = function(actor, npc, p)
+        return p[1] and actor and actor:object(p[1])
+    end
+    xr_conditions.actor_has_item = function(actor, npc, p)
+        if not p[1] then return end
+        if IIsHost() then
+            for _, v in pairs(db.actors) do
+                if v.object and v.object:object(p[1]) then
+                    return true
+                end
+            end
+        end
+        return actor and actor:object(p[1])
+    end
+    xr_conditions.actor_has_item_count = function(actor, npc, p)
+        local item_section = p[1]
+        local need_count   = tonumber(p[2])
+        local has_count    = 0
+        local function calc(temp, item)
+            if item:section() == item_section then
+                has_count = has_count + 1
+            end
+        end
+        if IIsHost() then
+            for _, v in pairs(db.actors) do
+                if v.object then
+                    v.object:iterate_inventory(calc, v.object)
+                end
+            end
+        end
+        actor:iterate_inventory(calc, actor)
+        return has_count >= need_count
+    end
+    xr_conditions.is_enemy_actor_or_companion = function(enemy, npc)
+        if (IsMonster(enemy)) then
+            return false
+        end
+        if not (npc:relation(enemy) >= game_object.enemy) then
+            return false
+        end
+        if xr_conditions.is_enemy_actor(enemy, npc) then
+            return true
+        end
+        if (alife():has_info(enemy:id(), "npcx_is_companion")) then
+            return true
+        end
+        return false
+    end
+    xr_conditions.fighting_actor = function(actor, npc)
+        local enemy_id = db.storage[npc:id()].enemy_id
+        local enemy = db.storage[enemy_id] and db.storage[enemy_id].object
+        return enemy and IsActor(enemy)
+    end
+    xr_conditions.i_in_zone = function(actor, npc, p)
+        local zone = db.zone_by_name[p[1]]
+        return utils.npc_in_zone(db.actor, zone)
+    end
+    xr_conditions.actor_in_zone = function(actor, npc, p)
+        local zone = db.zone_by_name[p[1]]
+        for k, v in pairs(db.actors) do
+            if v.object and utils.npc_in_zone(db.actor, zone) then
+                return true
+            end
+        end
+        return utils.npc_in_zone(db.actor, zone)
+    end
+    xr_conditions.is_enemy_actor = function(enemy, object)
+        return enemy and IsActor(enemy)
+    end
+    xr_conditions.has_actor_enemy = function(actor, npc)
+        local best_enemy = npc:best_enemy()
+        return best_enemy and IsActor(best_enemy)
+    end
+    xr_effects.destroy_object = function(actor, obj, p)
+        local sobj
+        if p == nil then
+            sobj = alife_object(obj:id())
+        else
+            if p[1] == nil or p[2] == nil then
+                abort("Wrong parameters in destroy_object function!!!")
+            end
+            local target_str = nil
+            if p[3] ~= nil then
+                target_str = p[1] .. "|" .. p[2] .. "," .. p[3]
+            else
+                target_str = p[1] .. "|" .. p[2]
+            end
+            local target_position, target_id, target_init = xr_remark.init_target(obj, target_str)
+            if target_id == nil then
+                printf("You are trying to set non-existant target [%s] for object [%s] in section [%s]", target_str,
+                    obj:name(), db.storage[obj:id()] and db.storage[obj:id()].active_section or "FUCK")
+                return
+            end
+            sobj = alife_object(target_id)
+        end
+        if sobj == nil then
+            return
+        end
+        printf("releasing object [" .. sobj:name() .. "]")
+        alife_release(sobj, true)
+    end
+    function ph_door.action_door:__init(obj, storage)
+        printf("action_door::action_door() called")
+        self.object = obj
+        self.st = storage
+        self.snd_obj = nil
+        storage.door_action = self
+    end
+    function ph_button.ph_button:__init(obj, storage)
+	    self.object = obj
+	    self.st = storage
+        storage.button_action = self
+    end
+    function ph_button.ph_button:use_callback(victim, who)
+        if not self.object then return end
+        GameManager:OnICustomAnimation("knopka_0", "", true, 1.7)
+        GameManager:OnIInteract(self.object:id(), 1)
+        if self:try_switch() then
+            return
+        end
+    end
+    function ph_door.action_door:use_callback(door, actor)
+        if not self.object then return end
+        if self.st.locked then
+            if self.st.snd_open_start then
+                self:door_play_snd_from_set(self.st.snd_open_start)
+            end
+        end
+        self:try_switch()
+        if self.st.closed then
+            GameManager:OnIInteract(self.object:id(), 0)
+        else
+            GameManager:OnIInteract(self.object:id(), 10)
+        end
+    end
+    xr_sound.get_sound = function(path, tt, npc)
+        if path == nil then return nil end
+        if path.exec == nil then
+            if npc == nil or tt == nil then return end
+            -- чтение настроек темы
+            local mxid = path.max_ids[npc:id()]
+
+            tt.into_id = path.into_id
+            tt.into_max = mxid and mxid.into_max
+            tt.into_last = nil
+
+            tt.rnd_id = path.rnd_id
+            tt.rnd_max = mxid and mxid.rnd_max
+            tt.rnd_last = nil
+
+            tt.min_snd = path.min_snd
+            tt.max_snd = path.max_snd
+            tt.rnd_snd = path.rnd_snd
+        else
+            xr_sound.get_sound(path.types[path.exec(path.types, npc)], tt, npc)
+        end
+    end
+    xr_sound.set_sound = function(npc, sound, now, into_timeout)
+        local data = OLDSETSOUND(npc, sound, into_timeout)
+        if not IIsHost() and sound and sound ~= "" then
+            local sobj = alife_object(npc) or alife():actor()
+            GameManager:OnCustomSound(tostring(sound), sobj and sobj.position or vector():set(0, 0, 0), sobj)
+        end
+        return data
+    end
+    xr_sound.set_sound_play = function(npc, sound, timeout)
+        local data = OLDSETSOUNDPLAY(npc, sound, timeout)
+        if IIsHost() then
+            local sobj = alife_object(npc:id()) or alife():actor()
+            GameManager:OnCustomSound(tostring(sound), sobj and sobj.position or vector():set(0, 0, 0), sobj)
+        end
+        return data
+    end
+    xr_effects.play_snd_now = function(actor, npc, p)
+        return OLDSETSOUNDPLAY(actor, p[1])
+    end
+    xr_sound.set_sound_play_client = function(npc, sound, timeout)
+        return OLDSETSOUNDPLAY(npc, sound, timeout)
+    end
+    dialog_manager.load = function(npc, reader, ver)
+        OLDDIALOGMGRLOAD(npc, reader, ver or 7) -- CRASH FIX FOR MODS
+    end
+    function bind_physic_object.generic_physics_binder:reinit()
+        object_binder.reinit(self)
+        db.storage[self.object:id()] = {}
+        self.st = db.storage[self.object:id()]
+    end
+    dialogs.relocate_item_section = function(victim, section, type)
+        if db.actor and victim then
+            if type == "in" then
+                alife_create_client(section, db.actor:position(), db.actor:level_vertex_id(), db.actor:game_vertex_id(),
+                    db.actor:id())
+            elseif type == "out" then
+                db.actor:transfer_item(db.actor:object(section), victim)
+            end
+            news_manager.relocate_item(db.actor, type, section)
+        end
+    end
+    dialogs.relocate_money = function(victim, num, type)
+        if db.actor and victim then
+            if type == "in" then
+                db.actor:give_money(num)
+                game_stats.money_quest_update(num)
+                GameManager:GetPlayerManager():SendRewardToAll(num)
+            elseif type == "out" then
+                db.actor:transfer_money(num, victim)
+                game_stats.money_quest_update(-num)
+            end
+            news_manager.relocate_money(db.actor, type, num)
+        end
+    end
+    -- DEFAULT SOC GIVE ITEM SYNC
+    yantar_dialog.yantar_give_bad_psy_helmet = function(first_speaker, second_speaker)
+        dialogs.relocate_item_section(db.actor, "bad_psy_helmet", "in")
+    end
+    xr_effects.yantar_give_bad_psy_helmet = yantar_dialog.yantar_give_bad_psy_helmet
+    yantar_dialog.yantar_give_good_psy_helmet = function(first_speaker, second_speaker)
+        dialogs.relocate_item_section(db.actor, "good_psy_helmet", "in")
+    end
+    xr_effects.yantar_give_good_psy_helmet = yantar_dialog.yantar_give_good_psy_helmet
+    escape_dialog.give_weapon_to_actor = function(trader, actor)
+        dialogs.relocate_item_section(db.actor, "wpn_pm", "in")
+        dialogs.relocate_item_section(db.actor, "ammo_9x18_fmj", "in")
+        dialogs.relocate_item_section(db.actor, "ammo_9x18_fmj", "in")
+        dialogs.relocate_item_section(db.actor, "wpn_knife", "in")
+        xr_effects.give_weapon_to_clients = function()
+        end
+    end
+    xr_effects.give_weapon_to_clients = escape_dialog.give_weapon_to_actor
+    xr_effects.start_x18_dream = function ()
+        game.start_tutorial("x18_dream")
+        xr_effects.start_x18_dream = function ()
+        end
+    end
+    if MPMain_TT2_STOGETHER then
+        MPMain_TT2_STOGETHER.Patch()
+        MPMain_NSOLYANKA_STOGETHER.Patch()
+    end
+end

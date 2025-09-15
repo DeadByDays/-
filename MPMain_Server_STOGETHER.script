@@ -1,0 +1,109 @@
+--[[
+[================]
+C++ Programmer & Author: Werasik2aa
+Project Creator: Monokit
+Description: Patch for host only things. Like weathers, physics and other registrator
+[================]
+--]]
+local GameManager = SteamGameManager()
+function Patch()
+    xr_effects.val_escort_guard_hit = function(actor, npc)
+        local t = db.storage[npc:id()].hit
+        if t then
+            for k, _ in pairs(db.actors) do
+                if t.who == k then
+                    actor:give_info_portion("val_escort_combat")
+                    actor:give_info_portion("val_escort_actor_helped")
+                    if not has_alife_info("val_escort_nap1_start_combat") then
+                        actor:give_info_portion("val_escort_captive_enemy")
+                    end
+                    return
+                end
+            end
+            if t.who == actor:id() then
+                actor:give_info_portion("val_escort_combat")
+                actor:give_info_portion("val_escort_actor_helped")
+                if not has_alife_info("val_escort_nap1_start_combat") then
+                    actor:give_info_portion("val_escort_captive_enemy")
+                end
+                return
+            end
+            local npc1 = level_object_by_sid(406)
+            if npc1 and t.who == npc1:id() then
+                actor:give_info_portion("val_escort_combat")
+                actor:give_info_portion("val_escort_nap1_start_combat")
+            end
+        end
+    end
+    xr_effects.val_escort_guard_death = function(actor, npc)
+        local idx = string.sub(npc:name(), -1)
+        local t = db.storage[npc:id()].death
+        actor:disable_info_portion("val_escort_guard" .. idx .. "_combat")
+        actor:give_info_portion("val_escort_guard" .. idx .. "_dead")
+        if t and t.killer then
+            if t.killer ~= actor:id() then
+                actor:give_info_portion("val_escort_actor_helped")
+                return
+            end
+            for k, _ in pairs(db.actors) do
+                if t.killer == k then
+                    actor:give_info_portion("val_escort_actor_helped")
+                    break
+                end
+            end
+        end
+    end
+    xr_effects.val_escort_guard_combat = function(actor, npc)
+        local idx = string.sub(npc:name(), -1)
+        actor:give_info_portion("val_escort_guard" .. idx .. "_combat")
+        for _, v in pairs(db.actors) do
+            if v.object and npc:see(v.object) then
+                if not has_alife_info("val_escort_nap1_start_combat") then
+                    actor:give_info_portion("val_escort_captive_enemy")
+                end
+                actor:give_info_portion("val_escort_combat")
+                return
+            end
+        end
+        if npc:see(actor) then
+            if not has_alife_info("val_escort_nap1_start_combat") then
+                actor:give_info_portion("val_escort_captive_enemy")
+            end
+            actor:give_info_portion("val_escort_combat")
+        end
+    end
+    xr_conditions.killed_by_actor = function(actor, npc)
+        local t = db.storage[npc:id()].death
+        if t then
+            local killed_by_actor = t.killer == actor:id()
+            for k, _ in pairs(db.actors) do
+                if t.killer == k then
+                    killed_by_actor = true
+                    break
+                end
+            end
+            printf("_bp: killed_by_player: %s", if_then_else(killed_by_actor, "true", "false"))
+            return killed_by_actor
+        end
+        return false
+    end
+    _G.distance_between = function(obj1, obj2)
+        return distance_between_safe(obj1, obj2)
+    end
+    _G.distance_between_safe = function (obj1, obj2)
+        if not obj1 or not obj2 then return 100000 end
+        local mpos1 = obj1:position()
+        local mpos2 = obj2:position()
+        local CurDIST = mpos1:distance_to(mpos2)
+        if obj1:id() == db.actor:id() or obj2:id() == db.actor:id() then
+            for _, v in pairs(db.actors) do
+                if v.object then
+                    local IsSecond = obj2:id() == db.actor:id()
+                    local dista = v.object:position():distance_to(IsSecond and mpos1 or mpos2)
+                    CurDIST = dista < CurDIST and dista or CurDIST
+                end
+            end
+        end
+	    return CurDIST
+    end
+end

@@ -1,0 +1,276 @@
+Obtaining classes from luabind functions
+SteamGameManager()
+This function is used to obtain the CSteamSocketGameManager class.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+SteamServer()
+This function is used to obtain the CSteamSocketServer class.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local ServerSOSOCK = SteamServer()
+SteamClient()
+This function is used to obtain the CSteamSocketClient class.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local ClientSOSOCK = SteamClient()
+GetPlayerManager()
+This function is used to obtain the CSteamSocketGameManager class.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+local PlayerManager = GameManager:GetPlayerManager()
+Object spawning and destruction functions
+alife_create_client(section, position, lv_id, gv_id, id_parent)
+This function is used to remotely spawn an object on the host side from a client without waiting.
+Sends a spawn entity request to the host. The host spawns the object.
+Example:
+alife_create_client("box", db.actor:position(), 0, 0)
+alife_create_awaite(functa, section, position, lv_id, gv_id, id_parent)
+This function is used to remotely spawn an object on the host side from a client with waiting.
+Sends a spawn entity request to the host. The host spawns the object. The client catches the event and calls functa(se_object)
+Example:
+alife_create_awaite(function(se)
+    if se then
+        log("Object box spawned: "..box:section_name())
+    end
+end, "box", db.actor:position(), 0, 0)
+alife_release_client(se_object)
+This function is used to remotely despawn an object on the host side from a client by se_object.
+Sends a despawn entity request to the host. The host despawns the object.
+Example:
+alife_release_client(alife_object(55))
+alife_release_client_id(id)
+This function is used to remotely despawn an object on the host side from a client by id.
+Sends a despawn entity request to the host. The host despawns the object.
+Example:
+alife_release_client_id(55)
+RequestEntityDespawn(CSE_ALifeDynamicObject* se)
+This function is used to remotely despawn an object on the host side from a client by id.
+Sends a despawn entity request to the host. The host despawns the object.
+Example:
+local GameManager = SteamGameManager()
+local se_obj = alife_object(55)
+GameManager:RequestEntityDespawn(se_obj)
+Player manager functions
+TeleportPlayer(u32 NetID, Fvector Position)
+This function is used to teleport a player to a position. THIS IS A HOST ACTION!
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+local PlayerManager = GameManager:GetPlayerManager()
+local pdata = PlayerManager:GetPlayerDataAtIndex(1) -- HOST IS 0
+if pdata then
+    local id = pdata:GetNetID()
+    local pos = db.actor:position()
+    PlayerManager:TeleportPlayer(id, pos)
+end
+SendToAnotherLevel(u32 NetID, Fvector Position, u32 gvid, u32 lvid, Fvector Angle)
+This function is used to teleport a player to a position or level. THIS IS A HOST ACTION! Advanced version.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+local PlayerManager = GameManager:GetPlayerManager()
+local pdata = PlayerManager:GetPlayerDataAtIndex(1) -- HOST IS 0
+if pdata then
+    local id = pdata:GetNetID()
+    local pos = db.actor:position()
+    local lvid = db.actor:level_vertex_id()
+    local gvid = db.actor:game_vertex_id()
+    PlayerManager:SendToAnotherLevel(id, pos, gvid, lvid, db.actor:direction())
+end
+KickPlayer(u32 NetID)
+This function is used to kick a player. THIS IS A HOST ACTION!
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+local ServerSOSOCK = SteamServer()
+local PlayerManager = GameManager:GetPlayerManager()
+local pdata = PlayerManager:GetPlayerDataAtIndex(1) -- HOST IS 0
+if pdata then
+    local id = pdata:GetNetID()
+    PlayerManager:KickPlayer(id)
+else
+    local NETid = ServerSOSOCK:get_player_by_index(1) -- HOST IS 0
+    PlayerManager:KickPlayer(NETid)
+end
+DespawnPlayer(u32 SNET, bool Erase)
+This function is used to force erase player data if need.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+local ServerSOSOCK = SteamServer()
+local PlayerManager = GameManager:GetPlayerManager()
+local pdata = PlayerManager:GetPlayerDataAtIndex(1) -- HOST IS 0
+if pdata then
+    local id = pdata:GetNetID()
+    PlayerManager:DespawnPlayer(id, false)
+else
+    local NETid = ServerSOSOCK:get_player_by_index(1) -- HOST IS 0
+    PlayerManager:DespawnPlayer(NETid, false)
+end
+Weather and time synchronization functions
+OnEmissionPsy(bool IsPsy, bool State)
+This function is used to send psy or emission start/stop state.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+GameManager:OnEmissionPsy(true, true) -- START PSY_STORM
+GameManager:OnEmissionPsy(false, true) -- START EMISSION
+OnTimeChanged()
+This function is used to synchronize time with clients.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+GameManager:OnTimeChanged()
+OnWeatherChanged()
+This function is used to synchronize weather with clients.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+GameManager:OnWeatherChanged()
+OnWeatherFXChanged()
+This function is used to synchronize weather effects with clients.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+GameManager:OnWeatherFXChanged()
+Custom actions synchronization functions
+OnICustomScriptAction()
+This function is used to send custom action to clients.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+GameManager:OnICustomScriptAction("ui_sleep_dialog.sleep_test", false)
+OnICustomAnimation(LPCSTR EBLANSKAYA_ANIM_NAME, LPCSTR APPEAR_ITEM, bool Force, float Delay, LPCSTR SND_NAME)
+This function used to play custom animation of us.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+local se_obj = alife_object(55)
+GameManager:OnICustomAnimation("sit_idle_0", "bread", true, 1.2, "sidor_talk_2")
+Quest sync actions
+OnIGetTask(CGameTask* datat, LPCSTR title_nt, LPCSTR descr_nt, u16 TaskGIVER, u16 Stage, bool newa)
+This function is used to send new task or task state to engine. New or Update task
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+... In task_manager.script
+local tma = self.task_info[task_id]
+bool IsNewTsak = true
+GameManager:OnIGetTask(tma.t, tma.current_title or "", tma.current_descr or "", tma.task_giver_id or 65535, tma.stage, IsNewTsak)
+OnForcedTaskState(LPCSTR ID, LPCSTR STATE)
+This function is used to send forced task state. For handle in lua
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+... In task_manager.script
+local tma = self.task_info[task_id]
+-- SEND OLD TASK
+-- When old task was updated. Need only to update params.
+-- In anomaly used to complete some sort of tasks.
+GameManager:OnForcedTaskState(task_id, "complete")
+OnIInfoPortion(LPCSTR Name, bool state)
+This function used for sync info portion. Enable or Disable state.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+GameManager:OnIInfoPortion("x18_dream_hell", true) -- ENABLE
+GameManager:OnIInfoPortion("x18_dream_hell_spawned", false) -- DISABLE
+BlockInfoPortion(LPCSTR)
+This function is used to block send infoportion from client's or host's side.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+GameManager:BlockInfoPortion("x16_zasada_2")
+OnEntitySpawned(CSE_ALifeDynamicObject* obj)
+This function used for send spawn event of spawned entity. (Used like for sync furniture?)
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+local se_obj = alife_object(55)
+GameManager:OnEntitySpawned(se_obj)
+OnCustomSound(LPCSTR Name, Fvector pos, u16 EID)
+This function used to play specified sound on place or npc
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+GameManager:OnCustomSound("sidor_talk_2", db.actor:position(), 0)
+GameManager:OnCustomSound("sidor_talk_2", db.actor:position(), alife_object(55))
+OnCustomSound(LPCSTR Name, Fvector pos, CSE_ALifeDynamicObject* EID)
+This function used to play specified sound on place or npc
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+local se_obj = alife_object(55)
+GameManager:OnCustomSound("sidor_talk_2", se_obj.position, se_obj)
+RegisterObject(CSE_ALifeDynamicObject* obj)
+This function used for registering of object to order in sync list
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+local se_obj = alife_object(55)
+GameManager:RegisterObject(se_obj)
+UnregisterObject(CSE_ALifeDynamicObject* obj)
+This function used for unregistering of object to order in sync list
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+local se_obj = alife_object(55)
+GameManager:UnregisterObject(se_obj)
+OnIWantCompanion(CSE_ALifeDynamicObject* obj)
+This function used to hire a companion on host's side.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+local se_obj = alife_object(55)
+GameManager:OnIWantCompanion(se_obj)
+OnIWantCompanion(u16 obj)
+This function used to hire a companion on host's side.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+GameManager:OnIWantCompanion(55)
+OnIWantCompanion(u16 obj)
+This function used to fire a companion on host's side.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+GameManager:OnINoWantCompanion(55)
+OnIWantCompanion(CSE_ALifeDynamicObject* obj)
+This function used to fire a companion on host's side.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+local se_obj = alife_object(55)
+GameManager:OnINoWantCompanion(se_obj)
+SendRewardTo(u32 TO, u32 FROM, u32 count)
+This function used to fire a companion on host's side.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+local ServerSOSOCK = SteamServer()
+local PlayerManager = GameManager:GetPlayerManager()
+local pdata = PlayerManager:GetPlayerDataAtIndex(1) -- HOST IS 0
+local pdatam = PlayerManager:GetPlayerDataAtIndex(0) -- HOST IS 0
+if pdata then
+    local id = pdata:GetNetID()
+    local id2 = pdatam:GetNetID()
+    PlayerManager:SendRewardTo(id, id2, 100)
+end
+SendDamageTo(u32 TO, u32 FROM, SHit* hit)
+This function used to fire a companion on host's side.
+Check lua_help_mp.lua to understand what you want to do.
+Example:
+local GameManager = SteamGameManager()
+local ServerSOSOCK = SteamServer()
+local PlayerManager = GameManager:GetPlayerManager()
+local pdata = PlayerManager:GetPlayerDataAtIndex(1) -- HOST IS 0
+local pdatam = PlayerManager:GetPlayerDataAtIndex(0) -- HOST IS 0
+if pdata then
+    local id = pdata:GetNetID()
+    local id2 = pdatam:GetNetID()
+    local hit = hit()
+    ...
+    PlayerManager:SendDamageTo(id, id2, hit)
+end

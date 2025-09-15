@@ -1,0 +1,492 @@
+--[[
+[================]
+C++ Programmer & Author: Werasik2aa
+Project Creator: Monokit
+Description: Patch for client things. Like spawn quest item or block spawn some objects.
+Here patches only for client! Which not hosted game!
+[================]
+--]]
+local GameManager = SteamGameManager()
+
+local OLDUNREGFSMARTOBJ = smart_terrain.se_smart_terrain.unregister_npc
+function Patch()
+    if alife() then
+        alife().create = function (sec, pos, lv, gv, id, sta)
+            if id or sec == "space_restrictor" then
+                local se_obj = alife():create_local(sec, pos, lv, gv, id, sta)
+                if id == db.actor:id() and se_obj then
+                    GameManager:OnQuestSpawner(se_obj)
+                end
+            end
+        end
+    end
+    sim_statistic.getNpcType = function(npc)
+        if not npc then return 1, 100 end
+        local cls = npc and npc:clsid()
+        if cls == clsid.script_stalker then
+            local community = npc:community()
+            local rank = ranks.get_obj_rank_name(npc)
+            return community, rank
+        else
+            local community = xr_statistic.monster_classes[cls]
+            if community == nil then
+                abort("Statistic ERROR: cannot find monstr class for clsid[%s]", get_clsid(npc))
+            end
+            local rank = ranks.get_obj_rank_name(npc)
+            return community, rank
+        end
+    end
+    function sim_statistic.simulation_statistic:add(npc)
+        --NO HOST HERE EE
+    end
+    function smart_terrain.se_smart_terrain:get_se_objs()
+    end
+    function smart_terrain.se_smart_terrain:fill_npc_info()
+        --HOST SET IT
+    end
+    function xr_gulag.gulag:update()
+    end
+    function xr_gulag.gulag:prepare_jobs()
+    end
+    function xr_gulag.gulag:setup_job_online(se_obj, job)
+    end
+    function xr_gulag.gulag:beginJob(obj_id)
+    end
+    function xr_gulag.gulag:free_obj(obj_id)
+    end
+    function xr_gulag.gulag:initialize()
+        self.ObjectJobPathName = {} --' по id. им€ патрульного пути места работы персонажа
+        self.restrictors       = {} --' по id. назначенные гулагом рестрикторы дл€ каждого персонажа
+        local ini = self.smrttrn:spawn_ini()
+        local sect = "smart_terrain"
+        if not ini:section_exist( sect ) then
+            sect = "gulag1"
+        end
+        self.state_switch_0 = xr_logic.parse_condlist( self.smrttrn, "gulag1", "switch_0", utils.cfg_get_string(ini, sect, "switch_0", self.smrttrn, false, "", "") )
+        self.state_switch_1 = xr_logic.parse_condlist( self.smrttrn, "gulag1", "switch_1", utils.cfg_get_string(ini, sect, "switch_1", self.smrttrn, false, "", "") )
+        self.JobLoaded = nil
+    end
+    function xr_gulag.gulag:object_setup_online(obj_id, obj, need_setup_logic, need_setup_restrictors)
+    end
+    gulag_tasks.loadJob = function (sj, gname, type, squad, groups, gulag)
+        --FUCK
+    end
+    gulag_tasks.loadLtx = function (name, type)
+        --FUCK
+    end
+    function task_manager.CRandomTask:load(p)
+    end
+    function task_manager.CRandomTask:task_fail(p1, p2)
+    end
+    if not amk then
+        function task_manager.CRandomTask:check_task_props(task_id)
+            --' ѕроверка по активным задани€м данного типа у вендора.
+            if self.active_task_by_type[self.task_info[task_id].complex_type] ~= nil then
+                self.task_info[task_id].enabled_props = false
+                return
+            end
+            --' ѕроверка по кондлисту
+            if xr_logic.pick_section_from_condlist(db.actor, db.actor, self.task_info[task_id].condlist) == nil then
+                self.task_info[task_id].enabled_props = false
+                return
+            end
+            --' ѕроверка по таймауту
+            if self.task_info[task_id].last_task_time ~= nil and
+                game.get_game_time():diffSec(self.task_info[task_id].last_task_time) < self.task_info[task_id].idle_time
+            then
+                self.task_info[task_id].enabled_props = false
+                return
+            end
+            --' проверка по таргету
+            if self.task_info[task_id].type == "find_item" then
+                if self.task_info[task_id].target_objects == nil or table.getn(self.task_info[task_id].target_objects) == 0 then
+                    self.task_info[task_id].enabled_props = false
+                    return
+                end
+                local parent_by_story = {
+                    [003] = "trader",
+                    [500] = "barman",
+                    [902] = "ecolog",
+                    [507] = "dolg",
+                    [707] = "freedom",
+                    [006] = "wolf",
+                    [004] = "shustriy",
+                    [510] = "drunk_dolg",
+                    [504] = "hunter",
+                    [518] = "zastava_commander",
+                    [506] = "petrenko",
+                    [607] = "lisiy",
+                    [515] = "mercenary"
+                }
+                for k,v in pairs(self.task_info[task_id].target_objects) do
+                    local obj = alife():object(v)
+                    if obj ~= nil then
+                        --' Ќужно игнорировать предметы, которые наход€тьс€ у вендоров.
+                        if obj.parent_id ~= nil then
+                            for kk,vv in pairs(parent_by_story) do
+                                local parent = alife():story_object(kk)
+                                if parent ~= nil and obj.parent_id == parent.id then
+                                    --' »гнорим предмет
+                                    self.task_info[task_id].enabled_props = false
+                                    return
+                                end
+                            end
+                        end
+
+                        self.task_info[task_id].enabled_props = true
+                        return
+                    end	
+                    self.task_info[task_id].enabled_props = false
+                    return
+                end
+            else
+                self.task_info[task_id].enabled_props = true
+                return
+            end
+        end
+        function task_manager.CRandomTask:task_complete(p1, p2)
+            if db.actor == nil then
+                return false
+            end
+
+            local sel_task = self.task_info[self.active_task_by_type[p1]]
+            if sel_task == nil then
+                return
+            end
+
+            if p2 == 0 then
+                if not sel_task.need_return and sel_task.status == "completed" then
+                    self.task_info[self.active_task_by_type[p1]].last_task_time = game.get_game_time()
+                    return true
+                end
+                if sel_task.status == "rewarded" then
+                    self.task_info[self.active_task_by_type[p1]].last_task_time = game.get_game_time()
+                    return true
+                end
+            end
+
+            if p2 == 1 then
+                if string.find(p1, "artefact") ~= nil then
+                    if db.actor:object(sel_task.target) ~= nil then
+                        self.task_info[self.active_task_by_type[p1]].status = "completed"
+                        return true
+                    end
+                elseif string.find(p1, "monster_part") ~= nil then
+                    if db.actor:object(sel_task.target) ~= nil then
+                        self.task_info[self.active_task_by_type[p1]].status = "completed"
+                        return true
+                    end
+                elseif string.find(p1, "find_item") ~= nil then
+                    if db.actor:object(sel_task.target) ~= nil then
+                        self.task_info[self.active_task_by_type[p1]].status = "completed"
+                        return true
+                    end
+                end
+            end
+            return false
+        end
+    end
+    function smart_terrain.se_smart_terrain:unregister_npc(obj)
+        if not obj then return end
+        OLDUNREGFSMARTOBJ(self, obj)
+    end
+    function xr_gulag.gulag:clear_restrictors_info(obj_id)
+    end
+    xr_gulag.get_gulag_by_name = function (name)
+        local go_strn = db.zone_by_name[name]
+        if go_strn then
+            local strn = alife():object(go_strn:id())
+            if not strn then return nil end
+            strn:initialize_if_needed()
+            return strn.gulag
+        else
+            return nil
+        end
+    end
+    function task_manager.CRandomTask:task_fail(p1, p2)
+        return false
+    end
+    function se_respawn.se_respawn:update()
+    end
+    function se_respawn.se_respawn:spawn()
+    end
+    function se_respawn.se_respawn:create()
+    end
+    function se_respawn.se_respawn:update_online()
+    end
+    se_respawn.spawn = function ()
+    end
+    xr_conditions.is_alive_all = function ()
+        return true
+    end
+    xr_conditions.is_alive_one = function ()
+        return true
+    end
+    xr_conditions.is_alive = function ()
+        return true
+    end
+    xr_conditions.esc_bandits_die = function ()
+        return escape_dialog.wolf_precond_univ()
+    end
+    function state_mgr_animation.animation:set_state(id, reset)
+    end
+    function state_mgr.state_manager:set_state(b)
+    end
+    function state_mgr.state_manager:update(a)
+    end
+    function state_mgr_direction.look_at_object(npc, st)
+    end
+    xr_effects.val_escort_guard_death = function()
+    end
+    xr_effects.val_escort_guard_combat = function()
+    end
+    xr_effects.val_escort_guard_hit = function()
+    end
+    escape_dialog.bandits_die = function ()
+        return escape_dialog.wolf_precond_univ()
+    end
+    gulag_escape.load_states = function ()
+        log1("![Client] No way we're not host gulag_escape")
+    end
+    escape_tasks.proceed = function ()
+        log1("![Client] No way we're not host escape_tasks")
+    end
+    escape_tasks.task_fox_complete = function ()
+        return false
+    end
+    escape_tasks.task_lager_complete = function ()
+        return false
+    end
+    escape_tasks.kill_tutorial_bandits = function ()
+        return false
+    end
+    escape_tasks.task_volk_fail = function ()
+        return false
+    end
+    escape_tasks.is_actor_enemy_lager = function ()
+        return false
+    end
+    quest_escape3.main = function ()
+        log1("![Client] No way we're not host quest_escape3")
+    end
+    i1.main = function ()
+        log1("![Client] No way we're not host i1")
+    end
+    i2.main = function ()
+        log1("![Client] No way we're not host i2")
+    end
+    i3.main = function ()
+        log1("![Client] No way we're not host i3")
+    end
+    isp.main = function ()
+        log1("![Client] No way we're not host isp")
+    end
+    petruxa1.main = function ()
+        log1("![Client] No way we're not host petruxa1")
+    end
+    petruxa2.main = function ()
+        log1("![Client] No way we're not host petruxa2")
+    end
+    petruxa3.main = function ()
+        log1("![Client] No way we're not host petruxa3")
+    end
+    petruxa4.main = function ()
+        log1("![Client] No way we're not host petruxa4")
+    end
+    quest_garbage.main = function ()
+        log1("![Client] No way we're not host quest_garbage")
+    end
+    quest_garbage2.main = function ()
+        log1("![Client] No way we're not host quest_garbage2")
+    end
+    quest_agroprom.main = function ()
+        log1("![Client] No way we're not host quest_agroprom")
+    end
+    quest_radar.main = function ()
+        log1("![Client] No way we're not host quest_radar")
+    end
+    agroprom_tasks.agr_actor_enemy = function ()
+        return false
+    end
+    task_1.main = function ()
+        log1("![Client] No way we're not host task1")
+    end
+    task_2.main = function ()
+        log1("![Client] No way we're not host task2")
+    end
+    task_3.main = function ()
+        log1("![Client] No way we're not host task3")
+    end
+    task_4.main = function ()
+        log1("![Client] No way we're not host task4")
+    end
+    task_5.main = function ()
+        log1("![Client] No way we're not host task5")
+    end
+    task_6.main = function ()
+        log1("![Client] No way we're not host task6")
+    end
+    task_7.main = function ()
+        log1("![Client] No way we're not host task7")
+    end
+    task_8.main = function ()
+        log1("![Client] No way we're not host task8")
+    end
+    task_9.main = function ()
+        log1("![Client] No way we're not host task9")
+    end
+    task_10.main = function ()
+        log1("![Client] No way we're not host task10")
+    end
+    task_11.main = function ()
+        log1("![Client] No way we're not host task11")
+    end
+    task_12.main = function ()
+        log1("![Client] No way we're not host task12")
+    end
+    task_13.main = function ()
+        log1("![Client] No way we're not host task13")
+    end
+    task_14.main = function ()
+        log1("![Client] No way we're not host task14")
+    end
+    task_15.main = function ()
+        log1("![Client] No way we're not host task15")
+    end
+    task_16.main = function ()
+        log1("![Client] No way we're not host task16")
+    end
+    task_17.main = function ()
+        log1("![Client] No way we're not host task17")
+    end
+    task_18.main = function ()
+        log1("![Client] No way we're not host task18")
+    end
+    task_19.main = function ()
+        log1("![Client] No way we're not host task19")
+    end
+    task_20.main = function ()
+        log1("![Client] No way we're not host task20")
+    end
+    task_level_x18.main = function ()
+        log1("![Client] No way we're not host task_level_x18")
+    end
+    task_level1.main = function ()
+        log1("![Client] No way we're not host task_level1")
+    end
+    task_level2.main = function ()
+        log1("![Client] No way we're not host task_level2")
+    end
+    task_level3.main = function ()
+        log1("![Client] No way we're not host task_level3")
+    end
+    task_level4.main = function ()
+        log1("![Client] No way we're not host task_level4")
+    end
+    task_level5.main = function ()
+        log1("![Client] No way we're not host task_level5")
+    end
+    task_level6.main = function ()
+        log1("![Client] No way we're not host task_level6")
+    end
+    task_level7.main = function ()
+        log1("![Client] No way we're not host task_level7")
+    end
+    task_level8.main = function ()
+        log1("![Client] No way we're not host task_level8")
+    end
+    task_sim.main = function ()
+        log1("![Client] No way we're not host task_sim")
+    end
+    x1.main = function ()
+        log1("![Client] No way we're not host task_sim")
+    end
+    x2.main = function ()
+        log1("![Client] No way we're not host task_sim")
+    end
+    x11.main = function ()
+        log1("![Client] No way we're not host task_sim")
+    end
+    escape_dialog.wolf_precond_univ = function (actor, npc)
+        return has_alife_info("esc_shustryi_secret")
+    end
+    garbage_tasks.task_hellcar_fail = function ()
+        return false
+    end
+    garbage_tasks.task_hellcar_fail2 = function ()
+        return false
+    end
+    yantar_tasks.yan_scientist_task_fail = function ()
+        return false
+    end
+    xr_effects.val_escort_guard_hit = function ()
+        log1("![Client] No way we're not host val_escort_guard_hit")
+    end
+    xr_effects.death_monolith_ghosts = function ()
+        log1("![Client] No way we're not host death_monolith_ghosts")
+    end
+    mil_tasks.courier_job_failed = function (task_id, subtask)
+        return false
+    end
+    xr_conditions.gulag_inactive = function ()
+        return false
+    end
+    xr_logic.generic_scheme_overrides = function(npc)
+        return npc and db.storage[npc:id()].overrides
+    end
+    ---- BLOCK THIS SHIT BECAUSE WE NOT HOST ----
+    --- USED AS HACKS AND WORK AROUNDS
+    -- ESCAPE BEFORE BRIDGE
+    GameManager:BlockInfoPortion("tutorial_wounded_death")
+    GameManager:BlockInfoPortion("tutorial_wounded_fail")
+    GameManager:BlockInfoPortion("tutorial_wounded_heal")
+    --GameManager:BlockInfoPortion("tutorial_wounded_give_info")
+    GameManager:BlockInfoPortion("esc_kolyan_lost")
+    GameManager:BlockInfoPortion("esc_kill_bandits_quest_kill")
+    GameManager:BlockInfoPortion("escape_stalker_done")
+    GameManager:BlockInfoPortion("tutorial_wounded_die")
+    GameManager:BlockInfoPortion("escape_stalker_dog_die")
+    GameManager:BlockInfoPortion("esc_find_doctor_start")
+
+
+    -- ESCAPE AFTER BRIDGE
+    GameManager:BlockInfoPortion("escape_stalker_give")
+    GameManager:BlockInfoPortion("garbage_meetstalker_start")
+    GameManager:BlockInfoPortion("escape_stalker_meet")
+    GameManager:BlockInfoPortion("escape_stalker_dog_spawn")
+    GameManager:BlockInfoPortion("esc_find_railroad_passage_done ")
+    GameManager:BlockInfoPortion("esc_bridge_pass_fire")
+    GameManager:BlockInfoPortion("escape_stalker_help")
+
+    -- AGRAPROM
+    GameManager:BlockInfoPortion("agr_factory_spawn_spetsnaz")
+    GameManager:BlockInfoPortion("agr_krot_task_complete")
+    GameManager:BlockInfoPortion("agr_find_gunslinger_cache_start")
+    GameManager:BlockInfoPortion("agr_krot_secret_info")
+    GameManager:BlockInfoPortion("agr_krot_band_done")
+    GameManager:BlockInfoPortion("yan_find_laboratory_end")
+
+    -- MILITARY
+    GameManager:BlockInfoPortion("mil_leader_quest2_failed")
+    GameManager:BlockInfoPortion("mil_courier_khutor_leave")
+
+    -- DARK VALLEY
+    GameManager:BlockInfoPortion("val_escort_guard1_dead")
+    GameManager:BlockInfoPortion("val_escort_guard2_dead")
+
+    -- YANTAR
+    GameManager:BlockInfoPortion("labx16_find")
+    GameManager:BlockInfoPortion("yan_test_info")
+    GameManager:BlockInfoPortion("x16_zasada_3")
+    GameManager:BlockInfoPortion("brain_snork_respawn_01")
+    GameManager:BlockInfoPortion("x16_zasada_2")
+    GameManager:BlockInfoPortion("yantar_vasilyev_info")
+    GameManager:BlockInfoPortion("pri_monolith_snipers_free")
+
+    -- GARBAGE
+    GameManager:BlockInfoPortion("gar_bandits_raid")
+    GameManager:BlockInfoPortion("gar_hellcar_death")
+    GameManager:BlockInfoPortion("gar_hellcar_help")
+    GameManager:BlockInfoPortion("gar_start_quest")
+    GameManager:BlockInfoPortion("gar_kill_boars_request")
+end
